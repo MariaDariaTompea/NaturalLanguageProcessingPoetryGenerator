@@ -1,3 +1,7 @@
+##Poetry generator 
+
+##Chapter 1:Markov Method
+
 ## How it Works: The Markov Chain Algorithm
 
 Unlike modern AI (like ChatGPT or Gemini) which use deep learning and millions of parameters, this project uses a purely **statistical method** called a **Markov Chain**.

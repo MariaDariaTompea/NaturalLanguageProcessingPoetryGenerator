@@ -1,0 +1,301 @@
+:root {
+    --bg-color: #0b0c10;
+    --card-bg: rgba(25, 27, 34, 0.7);
+    --primary-color: #66fcf1;
+    --secondary-color: #45a29e;
+    --text-main: #c5c6c7;
+    --text-dim: #8892b0;
+    --accent-color: #c5a3ff;
+    --accent-glow: rgba(197, 163, 255, 0.2);
+    --glass-border: rgba(255, 255, 255, 0.1);
+    --highlight-red: #ff4a4a;
+    --highlight-gold: #ffcf40;
+    --transition-speed: 0.3s;
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    background-color: var(--bg-color);
+    color: var(--text-main);
+    font-family: 'Outfit', sans-serif;
+    line-height: 1.6;
+    overflow-x: hidden;
+    min-height: 100vh;
+}
+
+.app-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 2rem;
+    position: relative;
+    z-index: 10;
+}
+
+header {
+    text-align: center;
+    margin-bottom: 2rem;
+    animation: fadeInDown 0.8s ease-out;
+}
+
+h1 {
+    font-family: 'Playfair Display', serif;
+    font-size: 4rem;
+    font-weight: 700;
+    background: linear-gradient(135deg, var(--primary-color), var(--accent-color));
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    letter-spacing: -2px;
+    margin-bottom: 0.5rem;
+}
+
+.subtitle {
+    font-size: 1.2rem;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    letter-spacing: 4px;
+}
+
+/* Mode Selector */
+.mode-selector {
+    display: flex;
+    gap: 1rem;
+    justify-content: center;
+    margin-bottom: 2rem;
+    padding: 1rem;
+    border-radius: 99px;
+}
+
+.nav-btn {
+    background: transparent;
+    border: none;
+    color: var(--text-dim);
+    padding: 0.8rem 1.5rem;
+    cursor: pointer;
+    font-weight: 600;
+    border-radius: 99px;
+    transition: all 0.3s;
+}
+
+.nav-btn:hover {
+    color: var(--primary-color);
+    background: rgba(102, 252, 241, 0.05);
+}
+
+.nav-btn.active {
+    color: var(--bg-color);
+    background: var(--primary-color);
+    box-shadow: 0 4px 15px rgba(102, 252, 241, 0.3);
+}
+
+main {
+    display: grid;
+    grid-template-columns: 1.5fr 1fr;
+    grid-template-areas: 
+        "mode global"
+        "output output";
+    gap: 2rem;
+}
+
+.mode-section {
+    grid-area: mode;
+    display: none;
+}
+
+.mode-section.active {
+    display: block;
+    animation: slideUpFade 0.5s ease-out;
+}
+
+.controls-section {
+    grid-area: global;
+}
+
+.output-section {
+    grid-area: output;
+    min-height: 400px;
+    display: flex;
+    flex-direction: column;
+}
+
+/* Glassmorphism Cards */
+.glass-card {
+    background: var(--card-bg);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid var(--glass-border);
+    border-radius: 24px;
+    padding: 2rem;
+    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
+    transition: all var(--transition-speed) ease;
+}
+
+h2 {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.8rem;
+    color: var(--text-main);
+}
+
+.badge {
+    padding: 0.5rem 1rem;
+    border-radius: 99px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    background: rgba(102, 252, 241, 0.1);
+    color: var(--primary-color);
+    border: 1px solid rgba(102, 252, 241, 0.2);
+}
+
+/* UI Elements */
+textarea {
+    width: 100%;
+    height: 300px;
+    background: rgba(0, 0, 0, 0.3);
+    border: 1px solid var(--glass-border);
+    border-radius: 16px;
+    padding: 1.2rem;
+    color: var(--text-main);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 1rem;
+    resize: none;
+    outline: none;
+}
+
+.hint {
+    font-size: 0.9rem;
+    color: var(--text-dim);
+    margin: -1rem 0 1.5rem 0;
+}
+
+/* Mode 2: Word Seeds */
+.word-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.8rem;
+    margin-bottom: 2rem;
+}
+
+.chip {
+    padding: 0.5rem 1.2rem;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid var(--glass-border);
+    border-radius: 12px;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-weight: 500;
+}
+
+.chip:hover {
+    background: rgba(102, 252, 241, 0.1);
+    border-color: var(--primary-color);
+}
+
+.chip.active {
+    background: var(--primary-color);
+    color: var(--bg-color);
+    border-color: var(--primary-color);
+}
+
+.selected-seeds label {
+    display: block;
+    font-size: 0.8rem;
+    margin-bottom: 0.5rem;
+    color: var(--text-dim);
+}
+
+.selected-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    min-height: 40px;
+    padding: 10px;
+    background: rgba(0,0,0,0.2);
+    border-radius: 12px;
+}
+
+/* Mode 3: Sparkle Box */
+.editor-wrapper {
+    position: relative;
+}
+
+#interactive-editor {
+    height: 200px;
+    font-size: 1.2rem;
+    line-height: 1.8;
+}
+
+.sparkle-box {
+    position: absolute;
+    bottom: -60px;
+    right: 20px;
+    background: linear-gradient(135deg, var(--accent-color), #8a2be2);
+    padding: 10px 20px;
+    border-radius: 12px;
+    color: white;
+    font-weight: 700;
+    box-shadow: 0 0 20px rgba(197, 163, 255, 0.6);
+    z-index: 100;
+    pointer-events: none;
+    transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.sparkle-box.hidden {
+    opacity: 0;
+    transform: translateY(10px) scale(0.9);
+}
+
+.sparkle-box::before {
+    content: "TAB TO FILL";
+    position: absolute;
+    top: -20px;
+    left: 10px;
+    font-size: 0.6rem;
+    letter-spacing: 1px;
+    opacity: 0.8;
+}
+
+.sparkle {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    top: 0;
+    left: 0;
+    background-image: radial-gradient(circle, white 1px, transparent 1px);
+    background-size: 10px 10px;
+    animation: sparkles 2s infinite linear;
+    pointer-events: none;
+}
+
+@keyframes sparkles {
+    from { background-position: 0 0; opacity: 0.8; }
+    to { background-position: 20px 20px; opacity: 0; }
+}
+
+/* General Layout & Buttons */
+.settings-grid { display: grid; gap: 1.5rem; margin-bottom: 1.5rem; }
+.setting { display: flex; flex-direction: column; gap: 0.5rem; }
+.btn-primary { width: 100%; padding: 1.2rem; border-radius: 16px; background: linear-gradient(135deg, var(--primary-color), var(--secondary-color)); color: var(--bg-color); font-weight: 700; cursor: pointer; border: none; }
+.btn-secondary { background: rgba(255, 255, 255, 0.05); border: 1px solid var(--glass-border); color: var(--text-main); padding: 0.6rem 1.2rem; border-radius: 12px; cursor: pointer; }
+
+/* Poem Area */
+.poem-area { margin-top: 1rem; background: rgba(0,0,0,0.2); border-radius: 16px; padding: 2rem; font-family: 'Playfair Display', serif; font-size: 1.6rem; text-align: center; white-space: pre-wrap; line-height: 2; font-style: italic; color: #fff; min-height: 200px; }
+
+/* Background */
+.bg-decoration { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: -1; overflow: hidden; }
+.orb { position: absolute; border-radius: 50%; filter: blur(80px); opacity: 0.3; }
+.orb-1 { width: 400px; height: 400px; background: var(--primary-color); top: -100px; right: -100px; animation: drift 20s infinite alternate ease-in-out; }
+.orb-2 { width: 350px; height: 350px; background: var(--accent-color); bottom: -50px; left: -50px; animation: drift 25s infinite alternate-reverse ease-in-out; }
+
+/* Animations */
+@keyframes fadeInDown { from { opacity: 0; transform: translateY(-30px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes slideUpFade { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes drift { from { transform: translate(0, 0); } to { transform: translate(50px, 50px); } }
+
+.invisible { opacity: 0; pointer-events: none; }
+@media (max-width: 900px) { main { grid-template-columns: 1fr; grid-template-areas: "mode" "global" "output"; } }

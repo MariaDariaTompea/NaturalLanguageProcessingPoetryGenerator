@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Symphony of Words | Interactive Poetry Studio</title>
+    <!-- SEO -->
+    <meta name="description" content="An interactive AI poetry generator. Training corpus, word seed generation, and real-time completions.">
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&family=Playfair+Display:ital,wght@0,400..900;1,400..900&family=JetBrains+Mono&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="app-container">
+        <header>
+            <h1 id="main-title">Symphony of Words</h1>
+            <p class="subtitle">AI-Assisted Poetic Laboratory</p>
+        </header>
+
+        <!-- Mode Selector -->
+        <nav class="mode-selector glass-card">
+            <button class="nav-btn active" data-mode="mode-corpus">Training Corpus</button>
+            <button class="nav-btn" data-mode="mode-seed">Word Input</button>
+            <button class="nav-btn" data-mode="mode-interactive">Fill Recommendation</button>
+        </nav>
+
+        <main>
+            <!-- MODE 1: Training Corpus -->
+            <section id="mode-corpus" class="mode-section active">
+                <div class="glass-card corpus-section">
+                    <div class="section-header">
+                        <h2>Corpus Training</h2>
+                        <span class="badge">Mode I</span>
+                    </div>
+                    <textarea id="corpus-input" placeholder="Paste your training dataset here..."></textarea>
+                    <div class="corpus-controls">
+                        <button id="reset-corpus" class="btn-secondary">Classic Dataset</button>
+                        <p id="token-count">Tokens: 0</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- MODE 2: Word Input -->
+            <section id="mode-seed" class="mode-section">
+                <div class="glass-card">
+                    <div class="section-header">
+                        <h2>Seed Word Generator</h2>
+                        <span class="badge">Mode II</span>
+                    </div>
+                    <p class="hint">Select keywords to inspire the algorithm.</p>
+                    <div id="seed-word-pool" class="word-chips">
+                        <!-- Words will be injected here -->
+                    </div>
+                    <div class="selected-seeds">
+                        <label>Selected Seeds:</label>
+                        <div id="active-seeds" class="selected-chips"></div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- MODE 3: Fill Recommendation -->
+            <section id="mode-interactive" class="mode-section">
+                <div class="glass-card">
+                    <div class="section-header">
+                        <h2>Interactive Muse</h2>
+                        <span class="badge">Mode III</span>
+                    </div>
+                    <p class="hint">Type your poem. Press <strong>TAB</strong> to accept suggestions. Hover to see alternatives.</p>
+                    <div class="editor-wrapper">
+                        <textarea id="interactive-editor" placeholder="Start writing something beautiful..."></textarea>
+                        <div id="suggestion-box" class="sparkle-box hidden">
+                            <span id="suggestion-text">...</span>
+                            <div class="sparkle"></div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- SHARED CONTROLS & OUTPUT -->
+            <div id="global-settings" class="controls-section glass-card">
+                <div class="section-header">
+                    <h2>Studio Configuration</h2>
+                </div>
+                <div class="settings-grid">
+                    <div class="setting">
+                        <label>Creativity (Order)</label>
+                        <select id="ngram-order">
+                            <option value="1">Abstract (Unigram)</option>
+                            <option value="2">Floating (Bigram)</option>
+                            <option value="3" selected>Masterwork (Trigram)</option>
+                        </select>
+                    </div>
+                    <div class="setting">
+                        <label>Composition Length</label>
+                        <input type="range" id="poem-length" min="10" max="100" value="40">
+                        <span id="length-val">40 words</span>
+                    </div>
+                </div>
+                <button id="generate-btn" class="btn-primary">
+                    Generate Poem
+                    <div class="shimmer"></div>
+                </button>
+            </div>
+
+            <div class="output-section glass-card" id="output-container">
+                <div class="section-header">
+                    <h2>The Poem</h2>
+                </div>
+                <div id="poem-display" class="poem-area">
+                    <p class="placeholder-text">The whispers of algorithms await your command...</p>
+                </div>
+                <div class="output-footer">
+                    <button id="copy-btn" class="btn-secondary invisible">Copy to Clipboard</button>
+                </div>
+            </div>
+        </main>
+
+        <footer>
+            <p>&copy; 2026 Algorithmic Arts Studio | Markov Poetry Generator</p>
+        </footer>
+    </div>
+
+    <!-- Background Decoration -->
+    <div class="bg-decoration">
+        <div class="orb orb-1"></div>
+        <div class="orb orb-2"></div>
+        <div class="orb orb-3"></div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>

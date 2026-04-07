@@ -1,17 +1,20 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Symphony of Words | Interactive Poetry Studio</title>
-    <!-- SEO -->
-    <meta name="description" content="An interactive AI poetry generator. Training corpus, word seed generation, and real-time completions.">
-    <!-- Google Fonts -->
+    <meta name="description"
+        content="An interactive AI poetry generator. Training corpus, word seed generation, and real-time completions.">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&family=Playfair+Display:ital,wght@0,400..900;1,400..900&family=JetBrains+Mono&display=swap" rel="stylesheet">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&family=Playfair+Display:ital,wght@0,400..900;1,400..900&family=JetBrains+Mono&display=swap"
+        rel="stylesheet">
     <link rel="stylesheet" href="style.css">
 </head>
+
 <body>
     <div class="app-container">
         <header>
@@ -19,7 +22,6 @@
             <p class="subtitle">AI-Assisted Poetic Laboratory</p>
         </header>
 
-        <!-- Mode Selector -->
         <nav class="mode-selector glass-card">
             <button class="nav-btn active" data-mode="mode-corpus">Training Corpus</button>
             <button class="nav-btn" data-mode="mode-seed">Word Input</button>
@@ -27,7 +29,6 @@
         </nav>
 
         <main>
-            <!-- MODE 1: Training Corpus -->
             <section id="mode-corpus" class="mode-section active">
                 <div class="glass-card corpus-section">
                     <div class="section-header">
@@ -42,7 +43,6 @@
                 </div>
             </section>
 
-            <!-- MODE 2: Word Input -->
             <section id="mode-seed" class="mode-section">
                 <div class="glass-card">
                     <div class="section-header">
@@ -51,7 +51,6 @@
                     </div>
                     <p class="hint">Select keywords to inspire the algorithm.</p>
                     <div id="seed-word-pool" class="word-chips">
-                        <!-- Words will be injected here -->
                     </div>
                     <div class="selected-seeds">
                         <label>Selected Seeds:</label>
@@ -60,14 +59,14 @@
                 </div>
             </section>
 
-            <!-- MODE 3: Fill Recommendation -->
             <section id="mode-interactive" class="mode-section">
                 <div class="glass-card">
                     <div class="section-header">
                         <h2>Interactive Muse</h2>
                         <span class="badge">Mode III</span>
                     </div>
-                    <p class="hint">Type your poem. Press <strong>TAB</strong> to accept suggestions. Hover to see alternatives.</p>
+                    <p class="hint">Type your poem. Press <strong>TAB</strong> to accept suggestions. Hover to see
+                        alternatives.</p>
                     <div class="editor-wrapper">
                         <textarea id="interactive-editor" placeholder="Start writing something beautiful..."></textarea>
                         <div id="suggestion-box" class="sparkle-box hidden">
@@ -78,26 +77,44 @@
                 </div>
             </section>
 
-            <!-- SHARED CONTROLS & OUTPUT -->
             <div id="global-settings" class="controls-section glass-card">
                 <div class="section-header">
                     <h2>Studio Configuration</h2>
                 </div>
                 <div class="settings-grid">
                     <div class="setting">
-                        <label>Creativity (Order)</label>
+                        <label>Generation Method</label>
+                        <select id="model-selector">
+                            <option value="markov" selected>Markov Chain (Probabilistic) [cite: 7, 311]</option>
+                            <option value="face">Full-FACE (Template & Aesthetic) [cite: 370, 403]</option>
+                        </select>
+                    </div>
+
+                    <div class="setting">
+                        <label>Creativity (Order) [cite: 59, 61]</label>
                         <select id="ngram-order">
                             <option value="1">Abstract (Unigram)</option>
                             <option value="2">Floating (Bigram)</option>
                             <option value="3" selected>Masterwork (Trigram)</option>
                         </select>
                     </div>
+
                     <div class="setting">
                         <label>Composition Length</label>
                         <input type="range" id="poem-length" min="10" max="100" value="40">
                         <span id="length-val">40 words</span>
                     </div>
+
+                    <div class="setting" id="aesthetic-setting" style="display:none;">
+                        <label>Aesthetic Focus [cite: 373, 666]</label>
+                        <select id="aesthetic-measure">
+                            <option value="lyricism">Lyricism (Meter/Rhyme)</option>
+                            <option value="flamboyance">Flamboyancy (Word Frequency)</option>
+                            <option value="sentiment">Sentiment (Emotional Mood)</option>
+                        </select>
+                    </div>
                 </div>
+
                 <button id="generate-btn" class="btn-primary">
                     Generate Poem
                     <div class="shimmer"></div>
@@ -118,11 +135,10 @@
         </main>
 
         <footer>
-            <p>&copy; 2026 Algorithmic Arts Studio | Markov Poetry Generator</p>
+            <p>&copy; 2026 Algorithmic Arts Studio | Multi-Model Poetry Generator [cite: 14, 377]</p>
         </footer>
     </div>
 
-    <!-- Background Decoration -->
     <div class="bg-decoration">
         <div class="orb orb-1"></div>
         <div class="orb orb-2"></div>
@@ -130,5 +146,21 @@
     </div>
 
     <script src="script.js"></script>
+    <script>
+        // Simple UI toggle for Model Selection
+        document.getElementById('model-selector').addEventListener('change', function () {
+            const aestheticBox = document.getElementById('aesthetic-setting');
+            const nGramBox = document.getElementById('ngram-order').parentElement;
+
+            if (this.value === 'face') {
+                aestheticBox.style.display = 'block';
+                nGramBox.style.opacity = '0.5'; // Markov order is less relevant for template generation
+            } else {
+                aestheticBox.style.display = 'none';
+                nGramBox.style.opacity = '1';
+            }
+        });
+    </script>
 </body>
+
 </html>

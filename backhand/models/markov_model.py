@@ -1,7 +1,7 @@
 import random
 import re
 import pronouncing
-from utils.nlp_helpers import nlp, get_synonym, train_word2vec
+from backhand.utils.nlp_helpers import nlp, get_synonym, train_word2vec
 
 
 # =====================================
@@ -110,6 +110,21 @@ class EnhancedMarkovPoet:
         self._analyze_corpus()
         self._train_embeddings()
         self._build_relational_graph()
+
+        # Era Stickiness: Mark Archaic/Historical language
+        self.ARCHAIC_MARKERS = {
+            'thou', 'thee', 'thy', 'thine', 'hath', 'doth', 'hast', 'ye', 'shalt', 'art',
+            'noght', 'togedre', 'moe', 'fairest', 'dost', 'wast', 'wert', 'ay', 'nay',
+            'spede', 'tresoun', 'togedre', 'amonte', 'noght'
+        }
+
+    def _is_archaic(self, word):
+        w = word.lower()
+        if w in self.ARCHAIC_MARKERS: return True
+        # Common historical endings
+        if len(w) > 4:
+            if w.endswith('eth') or w.endswith('est'): return True
+        return False
 
     def _analyze_corpus(self):
         """
@@ -334,6 +349,18 @@ class EnhancedMarkovPoet:
                     
                     if word.lower() in [w.lower() for w in words[-3:]]:
                         word_score -= 5.0
+
+                    # Era Consistency Scoring (Style Stickiness)
+                    # Look at the previous 8 words to see if we've committed to a style
+                    is_archaic_history = any(self._is_archaic(w) for w in words[-8:])
+                    is_archaic_cand = self._is_archaic(word)
+                    
+                    if is_archaic_history:
+                        if is_archaic_cand: word_score += 10.0 # Reinforce Era consistency
+                        else: word_score -= 15.0 # Penalize jumping to modern mid-stanza
+                    else:
+                        if is_archaic_cand: word_score -= 15.0 # Keep it modern by default
+                        else: word_score += 5.0
                     
                     pre_scored.append((word, word_score))
                 
@@ -397,18 +424,104 @@ class EnhancedMarkovPoet:
                 
         return refined
 
-    def generate_poem(self, length=40, words_per_line=6, theme_word=None):
+    def generate_poem(self, length=40, theme_word=None, strategy="constrained"):
         """
-        Advanced poem generation using Beam Search + GMNN Relational Refinement.
+        Main entry point for Constrained Markov Process generation.
         """
-        if not self.chain:
-            return "Corpus too small."
+        if strategy == "constrained":
+            return self.generate_constrained_poem(length=length, theme_word=theme_word)
+        else:
+            words = self.beam_search_generate(length=length, theme_word=theme_word)
+            return format_poem(words)
 
-        # E-Step: Generate draft with Strategic Beam Search
-        poem_words = self.beam_search_generate(length=length, theme_word=theme_word)
+    def generate_constrained_poem(self, length=40, theme_word=None, rhyme_scheme="AABB"):
+        """
+        Generates a poem where each line is solved as a constraint satisfaction problem.
+        """
+        stanza_count = (length // 24) + 1
+        full_poem_words = []
+        
+        # We solve the poem in quatrains (4 lines)
+        for _ in range(stanza_count):
+            quatrain_lines = self.generate_quatrain_cmp(rhyme_scheme, theme_word)
+            for line in quatrain_lines:
+                full_poem_words.extend(line.split())
+            if len(full_poem_words) >= length: break
+            
+        return format_poem(full_poem_words)
 
-        # M-Step: Iterative Relational Refinement (GMNN)
-        poem_words = self.refine_poem_relational(poem_words, passes=2)
+    def generate_quatrain_cmp(self, scheme, theme_word):
+        """
+        CMP Quatrain Solver: Uses backtracking/search to find lines that rhyme.
+        """
+        lines = [None] * 4
+        rhymes_needed = {} 
+        
+        for i, char in enumerate(scheme):
+            target_rhyme = rhymes_needed.get(char)
+            line = self.solve_line_constraints(target_rhyme, theme_word)
+            
+            if char not in rhymes_needed:
+                rhymes_needed[char] = self._get_rhyme_part(line.split()[-1])
+            
+            lines[i] = line
+            
+        return lines
+
+    def solve_line_constraints(self, target_rhyme, theme_word, max_attempts=5):
+        """
+        The core CMP Solver: Generates a line that satisfies the rhyme constraint.
+        """
+        for _ in range(max_attempts):
+            # Beam search with constraint filtering
+            line_tokens = self.beam_search_generate_constrained(target_rhyme, theme_word)
+            if line_tokens:
+                return " ".join(line_tokens)
+        
+        # Fallback
+        return " ".join(self.beam_search_generate(length=6, theme_word=theme_word)[:6])
+
+    def beam_search_generate_constrained(self, target_rhyme, theme_word, beam_width=3, max_tokens=7):
+        """
+        Beam Search specialized for CMP: Penalizes paths that don't reach a rhyme.
+        """
+        import pronouncing
+        states = list(self.chain.keys())
+        seed = random.choice(states)
+        beam = [(0.0, list(seed), list(seed))]
+
+        for i in range(max_tokens - self.order):
+            new_beam = []
+            for score, words, lemmas in beam:
+                # Use standard VOMC candidates
+                candidates, _ = self._get_candidates_vomc(lemmas[-1])
+                
+                is_final_word = (i == max_tokens - self.order - 1)
+                
+                for word, pos in candidates[:10]:
+                    word_score = 5.0
+                    
+                    # Constraint Verification
+                    if target_rhyme and is_final_word:
+                        if self._get_rhyme_part(word) == target_rhyme:
+                            word_score += 100.0 # Match!
+                        else:
+                            word_score -= 80.0 # Violation
+                    
+                    new_words = words + [word]
+                    new_lemmas = (lemmas + [self._fast_lemma(word)])[1:]
+                    new_beam.append((score + word_score, new_words, new_lemmas))
+            
+            new_beam.sort(key=lambda x: x[0], reverse=True)
+            beam = new_beam[:beam_width]
+
+        return beam[0][1]
+
+    def _get_rhyme_part(self, word):
+        import pronouncing
+        phones = pronouncing.phones_for_word(word)
+        if not phones: return None
+        return pronouncing.rhyming_part(phones[0])
 
         # WordNet variation
         final_words = []

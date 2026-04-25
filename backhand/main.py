@@ -1,6 +1,6 @@
 import random
-from utils.nlp_helpers import load_corpus
-from models.markov_model import (
+from backhand.utils.nlp_helpers import load_corpus
+from backhand.models.markov_model import (
     preprocess_text,
     build_markov_chain,
     generate_simple_poem,

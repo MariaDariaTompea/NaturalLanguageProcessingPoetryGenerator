@@ -23,9 +23,9 @@ async def startup_event():
     global poet_brain
     print("Waking up the Strategic Brain...")
     
-    corpus_path = os.path.join("data", "large_corpus.txt")
+    corpus_path = os.path.join("data", "gutenberg_modern.txt")
     if not os.path.exists(corpus_path):
-        corpus_path = os.path.join("data", "corpus.txt")
+        corpus_path = os.path.join("data", "large_corpus.txt")
         
     text = load_corpus(corpus_path)
     if text:

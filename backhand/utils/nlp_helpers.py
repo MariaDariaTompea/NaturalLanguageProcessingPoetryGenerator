@@ -7,10 +7,12 @@ from gensim.models import Word2Vec
 
 # SpaCy model yükleme
 try:
-    nlp = spacy.load("en_core_web_sm")
+    nlp = spacy.load("en_core_web_sm", disable=["parser", "ner"])
+    nlp.max_length = 5000000
 except:
     os.system("python -m spacy download en_core_web_sm")
-    nlp = spacy.load("en_core_web_sm")
+    nlp = spacy.load("en_core_web_sm", disable=["parser", "ner"])
+    nlp.max_length = 5000000
 
 
 def load_corpus(file_path):

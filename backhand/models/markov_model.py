@@ -56,19 +56,29 @@ def generate_simple_poem(chain, n=1, length=30, words_per_line=5):
             poem_tokens.extend(list(current_state))
 
     # Format
-    formatted = ""
-    for i, word in enumerate(poem_tokens):
-        if i == 0:
+    lines = []
+    current_line = []
+    for word in poem_tokens:
+        if not current_line and re.match(r'^[.,!?;:]+$', word):
+            continue
+            
+        if not current_line:
             word = word.capitalize()
-
-        formatted += word
-
-        if (i + 1) % words_per_line == 0:
-            formatted += "\n"
-        else:
-            formatted += " "
-
-    return formatted.strip()
+            
+        if re.match(r'^[.,!?;:]+$', word) and current_line:
+            current_line[-1] += word
+            continue
+            
+        current_line.append(word)
+        
+        if len(current_line) >= words_per_line:
+            lines.append(" ".join(current_line))
+            current_line = []
+            
+    if current_line:
+        lines.append(" ".join(current_line))
+        
+    return "\n".join(lines).strip()
 
 
 # =====================================
@@ -192,16 +202,26 @@ class EnhancedMarkovPoet:
                 final_words.append(word)
 
         # Formatting
-        formatted = ""
-        for i, word in enumerate(final_words):
-            if i == 0 or (i > 0 and final_words[i-1] in ".!?"):
+        lines = []
+        current_line = []
+        for word in final_words:
+            if not current_line and re.match(r'^[.,!?;:]+$', word):
+                continue
+                
+            if not current_line:
                 word = word.capitalize()
-
-            formatted += word
-
-            if (i + 1) % words_per_line == 0:
-                formatted += "\n"
-            else:
-                formatted += " "
-
-        return formatted.strip()
+                
+            if re.match(r'^[.,!?;:]+$', word) and current_line:
+                current_line[-1] += word
+                continue
+                
+            current_line.append(word)
+            
+            if len(current_line) >= words_per_line:
+                lines.append(" ".join(current_line))
+                current_line = []
+                
+        if current_line:
+            lines.append(" ".join(current_line))
+            
+        return "\n".join(lines).strip()

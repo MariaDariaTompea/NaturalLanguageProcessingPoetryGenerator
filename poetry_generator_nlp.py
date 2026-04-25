@@ -158,18 +158,29 @@ class EnhancedMarkovPoet:
                 final_poem.append(word)
 
         # Formatting
-        formatted = ""
-        for i, word in enumerate(final_poem):
-            if i == 0 or (i > 0 and final_poem[i-1] in ".!?"):
-                word = word.capitalize()
-            
-            formatted += word
-            if (i+1) % words_per_line == 0:
-                formatted += "\n"
-            else:
-                formatted += " "
+        lines = []
+        current_line = []
+        for word in final_poem:
+            if not current_line and re.match(r'^[.,!?;:]+$', word):
+                continue
                 
-        return formatted.strip()
+            if not current_line:
+                word = word.capitalize()
+                
+            if re.match(r'^[.,!?;:]+$', word) and current_line:
+                current_line[-1] += word
+                continue
+                
+            current_line.append(word)
+            
+            if len(current_line) >= words_per_line:
+                lines.append(" ".join(current_line))
+                current_line = []
+                
+        if current_line:
+            lines.append(" ".join(current_line))
+            
+        return "\n".join(lines).strip()
 
 def main():
     corpus_path = "large_corpus.txt"

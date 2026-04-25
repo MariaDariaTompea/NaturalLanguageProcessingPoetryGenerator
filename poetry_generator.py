@@ -74,20 +74,29 @@ def generate_poem(chain, n=1, length=30, words_per_line=5):
             poem_tokens.extend(list(current_state))
     
     # Formatting
-    formatted_poem = ""
-    for i, word in enumerate(poem_tokens):
-        if i == 0:
+    lines = []
+    current_line = []
+    for word in poem_tokens:
+        if not current_line and re.match(r'^[.,!?;:]+$', word):
+            continue
+            
+        if not current_line:
             word = word.capitalize()
             
-        formatted_poem += word
-        
-        # Add line breaks
-        if (i + 1) % words_per_line == 0:
-            formatted_poem += "\n"
-        else:
-            formatted_poem += " "
+        if re.match(r'^[.,!?;:]+$', word) and current_line:
+            current_line[-1] += word
+            continue
             
-    return formatted_poem.strip()
+        current_line.append(word)
+        
+        if len(current_line) >= words_per_line:
+            lines.append(" ".join(current_line))
+            current_line = []
+            
+    if current_line:
+        lines.append(" ".join(current_line))
+        
+    return "\n".join(lines).strip()
 
 def main():
     corpus_path = "corpus.txt"

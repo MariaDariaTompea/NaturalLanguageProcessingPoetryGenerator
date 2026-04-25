@@ -79,9 +79,27 @@ class EnhancedFacePoet:
         for word in poem_words:
             final.append(self.get_synonym(word) if len(word) > 4 and random.random() < 0.1 else word)
 
-        formatted = ""
-        for i, word in enumerate(final):
-            if i == 0: word = word.capitalize()
-            formatted += word
-            formatted += "\n" if (i+1) % words_per_line == 0 else " "
-        return formatted.strip()
+        import re
+        lines = []
+        current_line = []
+        for word in final:
+            if not current_line and re.match(r'^[.,!?;:]+$', word):
+                continue
+                
+            if not current_line:
+                word = word.capitalize()
+                
+            if re.match(r'^[.,!?;:]+$', word) and current_line:
+                current_line[-1] += word
+                continue
+                
+            current_line.append(word)
+            
+            if len(current_line) >= words_per_line:
+                lines.append(" ".join(current_line))
+                current_line = []
+                
+        if current_line:
+            lines.append(" ".join(current_line))
+            
+        return "\n".join(lines).strip()

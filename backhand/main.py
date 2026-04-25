@@ -8,7 +8,7 @@ from models.markov_model import (
 )
 
 def main():
-    corpus_path = "corpus.txt"
+    corpus_path = "data/corpus.txt"
 
     print("Loading corpus...")
     text = load_corpus(corpus_path)

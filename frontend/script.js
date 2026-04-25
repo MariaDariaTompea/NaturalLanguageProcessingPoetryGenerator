@@ -2306,7 +2306,16 @@ class SymphonyStudio {
         let line = [];
         for (let i = 0; i < tokens.length; i++) {
             let w = tokens[i];
-            if (i === 0) w = w.charAt(0).toUpperCase() + w.slice(1);
+            
+            if (line.length === 0 && /^[.,!?;:]+$/.test(w)) continue;
+            
+            if (line.length === 0) w = w.charAt(0).toUpperCase() + w.slice(1);
+            
+            if (/^[.,!?;:]+$/.test(w) && line.length > 0) {
+                line[line.length - 1] += w;
+                continue;
+            }
+            
             line.push(w);
 
             if (line.length >= wordsPerLine) {

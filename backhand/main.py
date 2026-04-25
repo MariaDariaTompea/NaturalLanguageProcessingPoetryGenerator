@@ -1,51 +1,21 @@
-import random
-from backhand.utils.nlp_helpers import load_corpus
-from backhand.models.markov_model import (
-    preprocess_text,
-    build_markov_chain,
-    generate_simple_poem,
-    EnhancedMarkovPoet
-)
+from utils.nlp_helpers import get_clean_corpus
+from models.markov_model import CMPPoet
 
 def main():
-    corpus_path = "data/corpus.txt"
+    print("Initializing Symphony of Words (CMP Model)...")
+    corpus = get_clean_corpus(limit=20000)
+    poet = CMPPoet(corpus)
 
-    print("Loading corpus...")
-    text = load_corpus(corpus_path)
+    # Constraints: Word at index 2 must be related to 'sea'
+    # Word at index 5 must be 'light'
+    my_constraints = {
+        2: ["sea", "ocean", "waves", "deep"],
+        5: ["light", "bright", "white"]
+    }
 
-    if not text:
-        return
-
-    # =========================
-    # SIMPLE MODEL
-    # =========================
-    tokens = preprocess_text(text)
-
-    print("\n--- SIMPLE (UNIGRAM) ---")
-    uni_chain = build_markov_chain(tokens, n=1)
-    print(generate_simple_poem(uni_chain, n=1))
-
-    print("\n--- SIMPLE (BIGRAM) ---")
-    bi_chain = build_markov_chain(tokens, n=2)
-    print(generate_simple_poem(bi_chain, n=2))
-
-    # =========================
-    # ENHANCED MODEL
-    # =========================
-    print("\n--- ENHANCED NLP MODEL ---")
-
-    poet = EnhancedMarkovPoet(text, order=2)
-    theme = random.choice(["love", "night", "science", "heart"])
-    print(f"Theme: {theme}")
-
-    print("\n[Forward Generation]")
-    print(poet.generate_poem(theme_word=theme))
-
-    print("\n[Backward Rhyme-Enforced Generation (AABBCC)]")
-    print(poet.generate_rhymed_poem(rhyme_scheme="AABBCC", theme_word=theme))
-
-    print("\n[Rhythmic Generation (0101010101 iambic)]")
-    print(poet.generate_rhythmic_poem(rhythm_template="0101010101", lines_count=4, theme_word=theme))
+    print("\n--- Generated Verses ---")
+    for _ in range(4):
+        print(poet.generate_line(L=6, constraints=my_constraints))
 
 if __name__ == "__main__":
     main()

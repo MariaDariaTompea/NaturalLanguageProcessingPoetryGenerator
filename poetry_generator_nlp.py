@@ -160,15 +160,20 @@ class EnhancedMarkovPoet:
         # Formatting
         lines = []
         current_line = []
+        capitalize_next = False
+        
         for word in final_poem:
             if not current_line and re.match(r'^[.,!?;:]+$', word):
                 continue
                 
-            if not current_line:
+            if not current_line or capitalize_next:
                 word = word.capitalize()
+                capitalize_next = False
                 
             if re.match(r'^[.,!?;:]+$', word) and current_line:
                 current_line[-1] += word
+                if re.search(r'[.!?;]$', word):
+                    capitalize_next = True
                 continue
                 
             current_line.append(word)

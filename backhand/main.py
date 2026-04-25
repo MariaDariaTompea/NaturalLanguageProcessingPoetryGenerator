@@ -38,8 +38,14 @@ def main():
     theme = random.choice(["love", "night", "science", "heart"])
     print(f"Theme: {theme}")
 
+    print("\n[Forward Generation]")
     print(poet.generate_poem(theme_word=theme))
 
+    print("\n[Backward Rhyme-Enforced Generation (AABBCC)]")
+    print(poet.generate_rhymed_poem(rhyme_scheme="AABBCC", theme_word=theme))
+
+    print("\n[Rhythmic Generation (0101010101 iambic)]")
+    print(poet.generate_rhythmic_poem(rhythm_template="0101010101", lines_count=4, theme_word=theme))
 
 if __name__ == "__main__":
     main()

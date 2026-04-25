@@ -1,0 +1,420 @@
+% ============================================================================
+% An Autonomous Poetry Generation System Using Markov Chains,
+% NLP-Enhanced Scoring, and Lexical Substitution
+% ============================================================================
+\documentclass[conference]{IEEEtran}
+
+% --- Packages ---
+\usepackage{cite}
+\usepackage{amsmath,amssymb,amsfonts}
+\usepackage{algorithmic}
+\usepackage{graphicx}
+\usepackage{textcomp}
+\usepackage{xcolor}
+\usepackage{booktabs}
+\usepackage{hyperref}
+\usepackage{listings}
+\usepackage{tabularx}
+\usepackage{multirow}
+\usepackage{url}
+
+% Listings style for Python
+\lstdefinestyle{pythonstyle}{
+    language=Python,
+    basicstyle=\ttfamily\scriptsize,
+    keywordstyle=\color{blue}\bfseries,
+    commentstyle=\color{gray}\itshape,
+    stringstyle=\color{red},
+    breaklines=true,
+    frame=single,
+    numbers=left,
+    numberstyle=\tiny\color{gray},
+    captionpos=b
+}
+
+\begin{document}
+
+\title{An Autonomous Poetry Generation System Using Markov Chains, NLP-Enhanced Scoring, and Lexical Substitution}
+
+\author{
+\IEEEauthorblockN{Maria-Daria Tompea}
+\IEEEauthorblockA{
+Faculty of Automation and Computer Science\\
+Technical University of Cluj-Napoca\\
+Cluj-Napoca, Romania\\
+\textit{maria.tompea@student.utcluj.ro}}
+}
+
+\maketitle
+
+% ============================================================================
+% ABSTRACT
+% ============================================================================
+\begin{abstract}
+This paper presents an autonomous poetry generation system that constructs aesthetically pleasing text based on specific user-provided stimuli. Unlike systems requiring real-time manual intervention, the proposed architecture focuses on generating a complete poem from a single conceptual input, such as a noun phrase. The methodology integrates Markov Chains for structural drafting with neural language models and rule-based constraints to ensure thematic consistency. A multi-stage pipeline first builds $n$-gram transition tables from a curated multi-genre corpus of over 2\,000 lines, then applies Part-of-Speech (POS) scoring via SpaCy and semantic similarity scoring via Word2Vec to rank candidate words during generation. Furthermore, to enhance the semantic depth of the output, a lexical substitution mechanism based on WordNet is employed to suggest and refine word choices according to the context of the generated lines. The system is deployed through an interactive web-based interface that allows users to adjust generation parameters in real time.
+\end{abstract}
+
+\begin{IEEEkeywords}
+Poetry Generation, Markov Chains, Natural Language Processing, Lexical Substitution, WordNet, Word2Vec, Computational Creativity
+\end{IEEEkeywords}
+
+% ============================================================================
+% I. INTRODUCTION
+% ============================================================================
+\section{Introduction}
+
+Poetry generation is an interdisciplinary challenge situated at the intersection of Natural Language Generation (NLG), Computational Creativity, and Artificial Intelligence. To produce text regarded as poetry, systems must handle multiple levels of language, including phonetics, lexical choice, syntax, and semantics~\cite{oliveira2009survey}. While many early models focused purely on structural templates, modern research strives to achieve a balance between ``poeticness,'' ``grammaticality,'' and ``meaningfulness''~\cite{manurung2004thesis}.
+
+The objective of this project is to develop a system that takes a user's initial input---such as ``the silent darkness of the night''---and utilizes it as a semantic seed to generate an entire poem. The system employs Markov Chains as a statistical foundation for establishing rhythmic and formal patterns. Following the drafting phase, the content is optimized using techniques inspired by the CR-PO system~\cite{popescu2022crpo}, specifically adjusting words to fit the desired topic or emotion associated with the user's input. To provide a higher level of creative value, the system incorporates the ``framing'' concept from the Full-FACE model~\cite{colton2012face}, which explains the context or motivation behind the generated output.
+
+The remainder of this paper is organized as follows. Section~\ref{sec:history} traces the historical evolution of poetry generation. Sections~\ref{sec:markov}, \ref{sec:face}, and~\ref{sec:crpo} provide detailed technical analyses of the three foundational methodologies. Section~\ref{sec:synthesis} presents a comparative synthesis of the approaches. Section~\ref{sec:system} describes the implemented system architecture. Finally, Section~\ref{sec:conclusion} offers concluding remarks and directions for future work.
+
+
+% ============================================================================
+% II. HISTORY AND EVOLUTION
+% ============================================================================
+\section{History and Evolution of Poetry Generation}
+\label{sec:history}
+
+The automatic generation of poetry has evolved from simple combinatory processes to sophisticated autonomous agents~\cite{oliveira2009survey}.
+
+\subsection{Early Combinatory and Template Era}
+Interest in this field dates back to the 1960s. Lutz's \textit{Stochastische Texte} (1959) randomly fitted words from Kafka's \textit{Das Schlo\ss} into pre-defined grammatical templates, producing recognisably Modernist literary affect from a lexicon of just sixteen subjects and sixteen predicates~\cite{colton2012face}. A notable later example is Raymond Queneau's \textit{Cent mille milliards de po\`emes} (1961), which generated new poems by interchanging lines from a base set of ten sonnets while respecting their positions, yielding $10^{14}$ potential combinations. Early ``experimental poetry'' often filled pre-defined grammatical templates with words from specific lexicons, such as the \textit{rimbaudelaires} produced by the ALAMO group, where nouns, verbs, and adjectives from Rimbaud's sonnets were replaced by words belonging to Baudelaire's vocabulary under ``strong syntactic and rhythmic constraints''~\cite{oliveira2009survey}.
+
+\subsection{Knowledge-Intensive and Rule-Based Systems}
+By the turn of the millennium, systems like WASP~\cite{gervas2000wasp} and ASPERA~\cite{gervas2001aspera} introduced rule-based construction heuristics to handle Spanish verse, focusing on independent verse generation and strophic forms. WASP was one of the first serious attempts at automatic poetry generation, implementing a forward-reasoning rule-based system that tested the importance of initial vocabulary, word choice, verse pattern selection, and construction heuristics. ASPERA extended WASP by adding Case-Based Reasoning (CBR) to retrieve and adapt existing verses to fit new content requirements. The CBR cycle---retrieve, reuse, revise, retain---allowed the system to learn from validated poems and improve over time. COLIBRI~\cite{diaz2002colibri} further enhanced this approach by storing cases in a Description Logic System with an application-dependent ontology (CBROnto).
+
+\subsection{Evolutionary Approaches}
+Manurung's McGonagall~\cite{manurung2004thesis} formulated poem generation as a state-space search problem using stochastic hill-climbing. The system maintained a population of candidate poems, each evaluated for grammaticality, poeticness, and meaningfulness. Mutation operators acted at multiple levels of representation---semantics, syntax, and phonetics---ensuring consistency across all three dimensions. Levy's POEVOLVE~\cite{levy2001poevolve} used a neural network trained on human judgements as the fitness function for a genetic algorithm that evolved limericks.
+
+\subsection{Autonomous Creativity and the FACE Model}
+In 2012, the Full-FACE system~\cite{colton2012face} marked a paradigm shift toward autonomous computer poets that could generate their own context. This model advocated for systems to not only produce artifacts (poems) but also to invent aesthetics and provide ``framing information'' through natural language commentaries to explain the creative act. The system constructed a mood for the day by analysing Guardian newspaper articles and used this to determine both the subject matter and the aesthetic criteria for poem evaluation.
+
+\subsection{Interactive and Constrained Language Models}
+Recent developments have leveraged Deep Neural Networks, such as RNNs and language models like CamemBERT, to improve poetic fluency~\cite{popescu2022crpo}. Modern architectures like CR-PO allow for the adjustment of words based on ``Independence Quotients'' (IQ) to align a poem's vocabulary with specific themes or emotions selected by the user, while maintaining grammatical coherence through constrained decoding strategies.
+
+\subsection{Lexical Substitution and Semantic Refinement}
+A critical part of the evolution involves disambiguating context to find suitable word substitutes. The SemEval-2007 Task~10~\cite{mccarthy2007semeval} provided the groundwork for identifying alternative words or phrases that can occur in given contexts without relying on a pre-defined inventory. The task demonstrated that finding lexical substitutes requires both access to a rich synonym resource and the ability to disambiguate context, using resources like WordNet~\cite{miller1993wordnet}. Systems achieving the highest scores combined distributional similarity measures with WordNet-based synonym retrieval.
+
+
+% ============================================================================
+% III. MARKOV CHAIN MODELS
+% ============================================================================
+\section{Methodology I: Markov Chain Models}
+\label{sec:markov}
+
+\subsection{Technical Principles}
+
+A Markov Chain is a stochastic process satisfying the \textit{Markov property}: the probability of transitioning to the next state depends only on the current state, not on the sequence of states that preceded it. Formally, for a sequence of random variables $X_1, X_2, \ldots$:
+
+\begin{equation}
+P(X_{t+1} = s \mid X_t, X_{t-1}, \ldots, X_1) = P(X_{t+1} = s \mid X_t)
+\end{equation}
+
+In the context of text generation, each ``state'' is a word (or a tuple of $n$ words for an $n$-th order model), and the ``transitions'' are the conditional probabilities of the next word given the current state. These probabilities are estimated from a training corpus via maximum likelihood estimation:
+
+\begin{equation}
+P(w_{i+1} \mid w_{i-n+1}, \ldots, w_i) = \frac{C(w_{i-n+1}, \ldots, w_i, w_{i+1})}{C(w_{i-n+1}, \ldots, w_i)}
+\end{equation}
+
+\noindent where $C(\cdot)$ denotes the count of the given $n$-gram sequence in the corpus.
+
+For poetry generation, the model order $n$ has a significant impact on output quality:
+
+\begin{itemize}
+    \item \textbf{Unigram ($n{=}1$):} Each word is selected based only on its overall frequency in the corpus. The output lacks grammatical structure and reads as ``word salad.''
+    \item \textbf{Bigram ($n{=}2$):} The model conditions on the previous word, producing basic subject-verb-object patterns and rudimentary syntactic coherence.
+    \item \textbf{Trigram ($n{=}3$):} The model conditions on the previous two words. Since English grammar frequently relies on three-word collocations (e.g., adjective--noun--verb), trigrams produce substantially more fluent and human-like output.
+\end{itemize}
+
+The generation algorithm proceeds as follows:
+
+\begin{enumerate}
+    \item \textbf{Initialization:} Select a random $n$-gram from the chain as the starting state.
+    \item \textbf{Transition:} Look up the current state in the transition table. Randomly select the next word from the list of observed successors, weighted by their empirical frequencies.
+    \item \textbf{Dead-End Handling:} If the current state has no recorded successors (a terminal state), re-initialize by selecting a new random state from the chain.
+    \item \textbf{Termination:} Repeat until the desired poem length is reached.
+\end{enumerate}
+
+The implementation in this project stores the chain as a Python dictionary mapping state tuples to lists of successor words:
+
+\begin{lstlisting}[style=pythonstyle, caption={Core Markov Chain construction}]
+def build_markov_chain(tokens, n=2):
+    chain = {}
+    for i in range(len(tokens) - n):
+        state = tuple(tokens[i:i+n])
+        next_word = tokens[i+n]
+        if state not in chain:
+            chain[state] = []
+        chain[state].append(next_word)
+    return chain
+\end{lstlisting}
+
+\subsection{Advantages and Limitations}
+
+\textbf{Advantages.}
+Markov Chains are computationally lightweight, requiring only a single pass over the corpus to build the transition table ($O(N)$ time and space, where $N$ is the number of tokens). They are fully transparent---every generation decision can be traced to a specific $n$-gram in the training data. The probabilistic nature of successor selection introduces controlled randomness, ensuring that no two generations are identical. Furthermore, the model order provides a simple knob for trading off creativity (lower $n$, more novel combinations) against coherence (higher $n$, more faithful reproduction of training patterns).
+
+\textbf{Limitations.}
+The fixed context window means the model has no long-range memory: a bigram model cannot ``remember'' the topic introduced three words ago. Higher-order models mitigate this but at the cost of data sparsity---the number of unique $n$-grams grows exponentially with $n$, leading to many terminal states and a tendency to reproduce verbatim passages from the corpus. Markov Chains also lack any notion of semantics; they treat words as opaque tokens with no understanding of meaning, topic, or emotional valence. Finally, without additional constraints, the model cannot enforce poetic features such as rhyme, meter, or stanza structure.
+
+
+% ============================================================================
+% IV. FULL-FACE MODEL
+% ============================================================================
+\section{Methodology II: The Full-FACE Model}
+\label{sec:face}
+
+\subsection{Technical Principles}
+
+The FACE (Framing, Aesthetics, Concepts, Examples) descriptive model, introduced by Colton, Charnley, and Pease~\cite{colton2012face}, provides a framework for evaluating creative systems based on the types of \textit{generative acts} they perform. Unlike purely artefact-focused systems, FACE advocates for four categories of generation:
+
+\begin{enumerate}
+    \item \textbf{Example Generation:} Producing concrete artefacts (poems). This corresponds to the instantiation phase, where templates are populated with text fragments.
+    \item \textbf{Concept Generation:} The system invents abstract structures, such as poem templates with constraints on rhyme scheme, meter, stanza length, and sentiment polarity.
+    \item \textbf{Aesthetic Generation:} The system dynamically constructs evaluation criteria. The Full-FACE system defines four aesthetic measures:
+    \begin{itemize}
+        \item \textit{Appropriateness:} Distance between the average sentiment of the poem's words and the target sentiment derived from the mood of the day.
+        \item \textit{Flamboyance:} Preference for unusual, low-frequency words (measured as the inverse of word frequency from the British National Corpus).
+        \item \textit{Lyricism:} The proportion of self-imposed linguistic constraints (syllable count, end-rhyme, start-rhyme) successfully adhered to.
+        \item \textit{Relevancy:} The extent to which the poem's vocabulary overlaps with keyphrases extracted from a topical source article.
+    \end{itemize}
+    \item \textbf{Framing Information:} The system generates a natural language commentary explaining what inspired the poem, what aesthetic was used, and why certain creative choices were made. This explicit self-reflection provides context that substitutes for the missing human-author perspective.
+\end{enumerate}
+
+The Full-FACE poetry generation pipeline operates in four stages:
+
+\begin{enumerate}
+    \item \textbf{Retrieval:} Similes are retrieved from a corpus of 21\,984 similes mined from the Google $n$-gram corpus, filtered by sentiment, evidence score, and word frequency. Simultaneously, a Guardian newspaper article is selected based on the ``mood of the day'' (computed as the average sentiment of articles published in the preceding 24 hours).
+    \item \textbf{Multiplication:} Selected similes are varied by substituting their object, aspect, or description components using three methods: distributional similarity (DISCO), simile-corpus similarity, and WordNet synonymy. Each variation is pruned if it already exists, violates POS constraints, or reverses sentiment polarity.
+    \item \textbf{Combination:} Simile variations and keyphrases from the newspaper article are combined according to combination templates that enforce word-matching constraints and POS compatibility.
+    \item \textbf{Instantiation:} The combined phrases are placed into poem templates with constraints on meter (stress patterns from the CMU Pronunciation Dictionary), rhyme (matching final phonemes), sentiment alternation, and word-stem uniqueness. The system generates 1\,000 candidate poems and selects the one with the highest average rank across the aesthetic measures in $M$.
+\end{enumerate}
+
+\subsection{Advantages and Limitations}
+
+\textbf{Advantages.}
+The Full-FACE model is the first poetry system to achieve generative acts in all four FACE categories. The mood-driven, article-based content selection grounds poems in real-world events, providing a substitute for human authorial context. The commentary generation offers transparency rarely seen in creative AI systems. The human-readable simile foundation ensures that individual phrases are interpretable, avoiding the ``word salad'' problem.
+
+\textbf{Limitations.}
+The yield of meaningful simile combinations is often low, limiting template options and leading to over-reliance on repeated or similar lines. The aesthetic differences among the 1\,000 generated poems per session were reported to be small, suggesting the evaluation function has insufficient discriminative power. The reliance on pre-existing human text (similes, newspaper articles) means the system's creative contribution is primarily in combination and selection rather than original word-level composition. The commentary, while valuable, is generated from hand-crafted templates rather than being truly ``understood'' by the system.
+
+
+% ============================================================================
+% V. CR-PO MODEL
+% ============================================================================
+\section{Methodology III: The CR-PO Model}
+\label{sec:crpo}
+
+\subsection{Technical Principles}
+
+The CR-PO (Constrained Recombination for POetry) system~\cite{popescu2022crpo} represents a modern approach to interactive poem generation that leverages constrained neural language models. Unlike purely generative models, CR-PO introduces the concept of \textit{word-level control} through Independence Quotients (IQ), allowing users to adjust the thematic alignment of generated text.
+
+The system operates in three phases:
+
+\begin{enumerate}
+    \item \textbf{Initial Generation:} A neural language model (e.g., CamemBERT for French poetry, or GPT-based models for English) generates an initial draft of the poem based on a prompt or seed text. The language model provides fluent, grammatically correct text with statistical coherence derived from its training on large corpora.
+    \item \textbf{Independence Quotient Analysis:} Each word in the generated draft is assigned an IQ score that quantifies how ``replaceable'' it is. The IQ is computed as the ratio of the word's conditional probability in context to its marginal (unigram) probability:
+    \begin{equation}
+        IQ(w_i) = \frac{P_{LM}(w_i \mid w_1, \ldots, w_{i-1})}{\hat{P}(w_i)}
+    \end{equation}
+    Words with high IQ are tightly bound to their context (function words, grammatical particles) and should not be replaced. Words with low IQ are semantically ``independent''---they contribute meaning but are not structurally essential, making them candidates for thematic adjustment.
+    \item \textbf{Constrained Substitution:} Low-IQ words are replaced with alternatives that better fit the user's desired theme or emotion. The substitution pool is drawn from semantically related words (via word embeddings or WordNet), filtered by the language model to ensure the replacement maintains grammatical coherence (i.e., the language model probability of the sentence does not drop below a threshold).
+\end{enumerate}
+
+The system also incorporates user interaction through a web interface where users can:
+\begin{itemize}
+    \item Select a theme or emotion for the poem.
+    \item Adjust the aggressiveness of word replacement (how many words are substituted).
+    \item Provide a seed text or accept a random starting point.
+    \item Iteratively refine the output by re-running the substitution phase.
+\end{itemize}
+
+\subsection{Advantages and Limitations}
+
+\textbf{Advantages.}
+CR-PO's use of neural language models ensures high grammatical fluency, avoiding the syntactic errors common in purely statistical models. The IQ-based analysis provides a principled, quantitative method for identifying which words to replace, rather than relying on random selection. The constrained substitution ensures that replacements do not degrade the overall quality of the poem. The interactive nature of the system allows for human-AI collaboration, combining machine fluency with human aesthetic judgment.
+
+\textbf{Limitations.}
+The system depends on large pre-trained language models, which require significant computational resources and may not be available for all languages. The IQ metric, while useful, can be sensitive to the quality of the underlying language model's probability estimates. The approach is fundamentally a \textit{refinement} system: it improves existing text rather than creating from scratch, which limits its creative autonomy. The user interaction, while valuable, means the system does not fully satisfy the criterion of autonomous creativity as defined by the FACE model.
+
+
+% ============================================================================
+% VI. SYNTHESIS AND COMPARISON
+% ============================================================================
+\section{Synthesis and Comparison of Approaches}
+\label{sec:synthesis}
+
+This section provides a comparative analysis of the three methodologies examined in this paper, evaluating them across five critical dimensions for poetry generation systems.
+
+\subsection{Conceptual Comparison}
+
+Table~\ref{tab:comparison} summarizes the key differences between Markov Chain, Full-FACE, and CR-PO approaches.
+
+\begin{table*}[htbp]
+\centering
+\caption{Comparative Analysis of Poetry Generation Approaches}
+\label{tab:comparison}
+\begin{tabularx}{\textwidth}{l X X X}
+\toprule
+\textbf{Dimension} & \textbf{Markov Chain} & \textbf{Full-FACE} & \textbf{CR-PO} \\
+\midrule
+\textbf{Contextual Awareness} & 
+None. Fixed $n$-word window with no global topic memory. &
+High. Derives mood from daily news; selects articles and similes based on sentiment analysis. &
+Medium. Uses LM context window (hundreds of tokens); theme guided by user input. \\
+\midrule
+\textbf{Creative Autonomy} &
+Low. Generates by statistical sampling with no self-evaluation or justification. &
+High. Invents aesthetics, generates commentary, and self-selects the best poem from 1\,000 candidates. &
+Medium. Generates and refines text but relies on user guidance for thematic direction. \\
+\midrule
+\textbf{Technical Complexity} &
+Low. Requires only corpus statistics ($O(N)$ construction). Runs on any hardware. &
+High. Integrates 7+ external resources (WordNet, DISCO, CMU dict, sentiment lexicon, etc.) with ML classifiers. &
+High. Requires pre-trained neural LMs with GPU inference for real-time generation. \\
+\midrule
+\textbf{Output Fluency} &
+Variable. Trigrams are coherent; unigrams are incoherent. Degrades at long range. &
+Medium. Simile-based phrases are interpretable, but full poems can feel disconnected. &
+High. Neural LMs produce grammatically fluent text comparable to human writing. \\
+\midrule
+\textbf{Semantic Depth} &
+None. Words are opaque tokens. &
+Medium. Sentiment and word-similarity constraints add shallow semantics. &
+High. IQ analysis and embedding-based substitution maintain and direct meaning. \\
+\bottomrule
+\end{tabularx}
+\end{table*}
+
+\subsection{Contextual Awareness}
+
+The Markov Chain model treats text as a memoryless sequence of tokens---its context is limited to exactly $n{-}1$ words. This makes it incapable of maintaining a consistent theme across a poem unless the training corpus is itself highly thematic. The Full-FACE model operates at the opposite extreme: it constructs a ``mood for the day'' by analysing the sentiment of newspaper articles, then uses this mood to select both source material and evaluation criteria. This external grounding in real-world events provides a form of contextual awareness that no other system achieves. The CR-PO model falls between these extremes, leveraging the implicit context captured by neural language models (typically hundreds of tokens of bidirectional context) but relying on the user to provide the thematic direction.
+
+\subsection{Human-Like Creativity vs. Statistical Fluency}
+
+A key distinction among these approaches is the source of perceived creativity. The Markov Chain produces novelty through random sampling: the output is unpredictable precisely because the model has no understanding of what it is saying. This ``accidental creativity'' can occasionally produce striking juxtapositions but is fundamentally undirected. The Full-FACE model introduces intentional creativity through its commentary generation---the ability to explain ``why'' a poem was written, what mood it reflects, and what aesthetic principles guided its construction. This self-explanation, even when generated from templates, significantly enhances audience perception of the system as a creative entity~\cite{colton2012face}. The CR-PO model achieves a different form of creativity through principled word substitution: by replacing only the semantically ``independent'' words (low-IQ tokens), it preserves the grammatical skeleton while redirecting the semantic content, a process analogous to how human poets revise drafts.
+
+
+% ============================================================================
+% VII. IMPLEMENTED SYSTEM
+% ============================================================================
+\section{Implemented System Architecture}
+\label{sec:system}
+
+The implemented system integrates concepts from all three approaches into a unified pipeline, combining Markov Chain generation with NLP-enhanced scoring and WordNet-based lexical substitution.
+
+\subsection{System Overview}
+
+The architecture consists of three layers:
+
+\begin{enumerate}
+    \item \textbf{Corpus Layer:} A curated multi-genre training corpus of over 2\,000 lines, spanning Shakespearean sonnets (\textit{love}), Romantic and modern verse (\textit{nature}), nonsense poetry (\textit{humorous}), Symbolist works (\textit{dark/philosophical}), and original science-themed poetry (\textit{science}). This thematic diversity ensures the Markov Chain captures a wide range of poetic registers and vocabularies.
+    \item \textbf{Generation Engine:} An enhanced Markov Chain that uses SpaCy-processed lemmas as states (for morphological flexibility) while storing surface-form words as transitions (for natural output). At each generation step, candidate words are scored using a weighted combination of POS-sequence fitness, Word2Vec semantic similarity to a user-provided theme word, and repetition penalty.
+    \item \textbf{Refinement Layer:} A post-generation WordNet-based lexical substitution pass that stochastically replaces words with synonyms to enhance lexical variety and semantic richness.
+\end{enumerate}
+
+\subsection{NLP-Enhanced Generation Pipeline}
+
+The generation pipeline extends the basic Markov Chain with three scoring mechanisms applied at each transition:
+
+\subsubsection{Part-of-Speech Sequence Scoring}
+A desired POS sequence (e.g., \texttt{[NOUN, VERB, ADJ, NOUN, ADP, DET, NOUN]}) is defined as a soft constraint. At generation step $i$, candidates whose POS tag (determined by SpaCy during corpus analysis) matches the ideal tag at position $i \bmod 7$ receive a bonus score of $+2.0$. This guides the output toward grammatically plausible structures without rigidly enforcing them.
+
+\subsubsection{Semantic Similarity Scoring}
+If the user provides a theme word $t$, each candidate word $w$ is scored by its cosine similarity to $t$ in a Word2Vec embedding space trained on the corpus:
+
+\begin{equation}
+    \text{score}_{\text{sem}}(w) = 3.0 \times \text{sim}(\vec{w}, \vec{t})
+\end{equation}
+
+This draws the poem's vocabulary toward the user's intended theme, implementing a lightweight version of CR-PO's thematic alignment without requiring a full neural language model.
+
+\subsubsection{Repetition Penalty}
+Any candidate word that appeared in the previous three tokens receives a penalty of $-5.0$, discouraging the verbatim repetition that plagues higher-order Markov models.
+
+The final selection is made by sorting candidates by total score and randomly selecting from the top 50\%, balancing quality with variety.
+
+\subsection{Lexical Substitution via WordNet}
+
+After generation, a post-processing pass iterates over the poem's tokens. Each word longer than four characters has a 10\% probability of being replaced by a randomly selected synonym from WordNet~\cite{miller1993wordnet}. This mechanism:
+\begin{itemize}
+    \item Increases lexical diversity without disrupting syntax (since WordNet synonyms share POS).
+    \item Introduces unexpected word choices that can create the surprising juxtapositions characteristic of poetry.
+    \item Mirrors the lexical substitution paradigm evaluated in SemEval-2007 Task~10~\cite{mccarthy2007semeval}, applied here as a generative rather than evaluative tool.
+\end{itemize}
+
+\subsection{Web-Based Interactive Interface}
+
+The system is deployed through a browser-based ``Symphony of Words'' studio built with HTML5, CSS3, and vanilla JavaScript. The interface provides:
+
+\begin{itemize}
+    \item \textbf{Parameter Controls:} Sliders for model order ($n = 1, 2, 3$), poem length, and words per line.
+    \item \textbf{Theme Selection:} A text input for the semantic seed word, or random selection from a predefined set (e.g., \textit{star}, \textit{love}, \textit{night}, \textit{atoms}, \textit{heart}, \textit{science}).
+    \item \textbf{Real-Time Generation:} Poems are generated client-side using a JavaScript implementation of the Markov Chain, with the full corpus embedded in the frontend for zero-latency generation.
+    \item \textbf{Interactive Muse:} A TAB-to-fill autocomplete feature that suggests the next word based on a statistical back-off model ($n$-gram $\to$ $(n{-}1)$-gram $\to$ unigram), allowing users to co-create poetry with the system.
+\end{itemize}
+
+
+% ============================================================================
+% VIII. CONCLUSION
+% ============================================================================
+\section{Conclusion and Future Work}
+\label{sec:conclusion}
+
+This paper has examined three distinct paradigms for automatic poetry generation---Markov Chains, the Full-FACE model, and the CR-PO system---and presented an implemented system that synthesizes elements from each. The Markov Chain provides computational efficiency and controlled randomness; the FACE model contributes the principle that creative systems should be able to explain their work; and the CR-PO model demonstrates that targeted word substitution can align text with a desired theme without sacrificing grammatical coherence.
+
+The implemented system demonstrates that even relatively simple statistical models can produce engaging poetic output when augmented with NLP techniques (POS tagging, word embeddings, synonym substitution). The multi-genre corpus ensures thematic breadth, while the scoring pipeline and WordNet refinement provide the semantic guidance that pure Markov models lack.
+
+Future work will focus on three areas: (1)~integrating phonetic constraints (syllable counting and end-rhyme enforcement using the CMU Pronunciation Dictionary) to support formal verse structures; (2)~implementing a commentary generation module inspired by Full-FACE, providing natural language explanations of the system's creative choices; and (3)~exploring the use of pre-trained transformer models as a drop-in replacement for the Markov Chain, enabling longer-range coherence while retaining the existing scoring and refinement pipeline.
+
+
+% ============================================================================
+% ACKNOWLEDGMENT
+% ============================================================================
+\section*{Acknowledgment}
+
+This work is the result of my own activity, and I confirm I have neither given, nor received unauthorized assistance for this work. I declare that I used generative AI tools (specifically, an AI coding assistant) in the creation of content for this project. In particular, AI was used to assist in designing and implementing the web-based interactive interface (the ``Symphony of Words'' poetry studio), generating portions of the training corpus, and drafting and refining the structure of this document. All outputs were reviewed, validated, and edited by the author.
+
+
+% ============================================================================
+% REFERENCES
+% ============================================================================
+\begin{thebibliography}{9}
+
+\bibitem{oliveira2009survey}
+H.~G.~Oliveira, ``Automatic generation of poetry: an overview,'' CISUC, Univ.\ Coimbra, Portugal, Tech.\ Rep., 2009.
+
+\bibitem{oliveira2017survey}
+H.~G.~Oliveira, ``A Survey on Intelligent Poetry Generation: Languages, Features, Techniques, Reutilisation and Evaluation,'' in \textit{Proc.\ 10th Int.\ Natural Language Generation Conf.}, 2017, pp.~11--20.
+
+\bibitem{popescu2022crpo}
+A.~Popescu-Belis, A.~R.~Atrio, V.~Minder, A.~Xanthos, G.~Luthier, S.~Mattei, and A.~Rodriguez, ``Constrained Language Models for Interactive Poem Generation,'' in \textit{Proc.\ 13th Conf.\ on Language Resources and Evaluation (LREC 2022)}, 2022, pp.~3519--3529.
+
+\bibitem{mccarthy2007semeval}
+D.~McCarthy and R.~Navigli, ``SemEval-2007 Task 10: English Lexical Substitution Task,'' in \textit{Proc.\ 4th Int.\ Workshop on Semantic Evaluations (SemEval-2007)}, 2007, pp.~48--53.
+
+\bibitem{colton2012face}
+S.~Colton, J.~Goodwin, and T.~Veale, ``Full-FACE Poetry Generation,'' in \textit{Proc.\ 3rd Int.\ Conf.\ on Computational Creativity (ICCC 2012)}, 2012, pp.~95--102.
+
+\bibitem{manurung2004thesis}
+H.~Manurung, ``An evolutionary algorithm approach to poetry generation,'' Ph.D.\ thesis, University of Edinburgh, 2004.
+
+\bibitem{gervas2000wasp}
+P.~Gerv\'{a}s, ``WASP: Evaluation of different strategies for the automatic generation of Spanish verse,'' in \textit{Proc.\ AISB'00 Symp.\ on Creative \& Cultural Aspects and Applications of AI \& Cognitive Science}, Birmingham, UK, 2000.
+
+\bibitem{gervas2001aspera}
+P.~Gerv\'{a}s, ``An expert system for the composition of formal Spanish poetry,'' \textit{Journal of Knowledge-Based Systems}, vol.~14, pp.~200--201, 2001.
+
+\bibitem{miller1993wordnet}
+G.~A.~Miller, R.~Beckwith, C.~Fellbaum, D.~Gross, and K.~Miller, ``Introduction to WordNet: an on-line lexical database,'' 1993.
+
+\bibitem{diaz2002colibri}
+B.~D\'{i}az-Agudo, P.~Gerv\'{a}s, and P.~A.~Gonz\'{a}lez-Calero, ``Poetry generation in COLIBRI,'' in \textit{Proc.\ 6th European Conf.\ on Advances in Case-Based Reasoning (ECCBR'02)}, London, UK, 2002, pp.~73--102.
+
+\bibitem{levy2001poevolve}
+R.~P.~Levy, ``A computational model of poetic creativity with neural network as measure of adaptive fitness,'' in \textit{Proc.\ ICCBR-01 Workshop on Creative Systems}, 2001.
+
+\end{thebibliography}
+
+\end{document}

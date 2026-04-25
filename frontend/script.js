@@ -2304,15 +2304,22 @@ class SymphonyStudio {
     async animatePoem(tokens) {
         const wordsPerLine = 6;
         let line = [];
+        let capitalizeNext = false;
         for (let i = 0; i < tokens.length; i++) {
             let w = tokens[i];
             
             if (line.length === 0 && /^[.,!?;:]+$/.test(w)) continue;
             
-            if (line.length === 0) w = w.charAt(0).toUpperCase() + w.slice(1);
+            if (line.length === 0 || capitalizeNext) {
+                w = w.charAt(0).toUpperCase() + w.slice(1);
+                capitalizeNext = false;
+            }
             
             if (/^[.,!?;:]+$/.test(w) && line.length > 0) {
                 line[line.length - 1] += w;
+                if (/[.!?;]$/.test(w)) {
+                    capitalizeNext = true;
+                }
                 continue;
             }
             

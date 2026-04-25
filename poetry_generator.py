@@ -1,3 +1,6 @@
+##### gpt says to put this file to models/markow (and some of it in models/utils/nlp_helpers)
+##### i didnt delete this one but tried put this in that file without lefting out anything
+
 import random
 import re
 import os

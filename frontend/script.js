@@ -2027,53 +2027,87 @@ class SymphonyStudio {
         // State
         this.activeMode = 'mode-corpus';
         this.selectedSeeds = new Set();
-        this.currentChain = null;
+        this.currentChain = new Map();
         this.currentTokens = [];
         this.currentRecommendation = "";
 
-        this.init();
+        console.log("🛠️ SymphonyStudio Class Initializing...");
+        try {
+            this.init();
+            console.log("✅ SymphonyStudio Initialization Complete");
+        } catch (e) {
+            console.error("❌ SymphonyStudio Initialization Failed:", e);
+        }
     }
 
     init() {
-        this.corpusInput.value = localStorage.getItem('symphony_corpus') || DEFAULT_CORPUS;
-        this.updateModel();
+        console.log("🚀 Starting init()...");
+        
+        try {
+            this.corpusInput.value = localStorage.getItem('symphony_corpus') || DEFAULT_CORPUS;
+            this.updateModel();
+        } catch (e) { console.warn("Failed to load corpus:", e); }
 
         // Nav Handling
         this.navButtons.forEach(btn => {
-            btn.addEventListener('click', () => this.switchMode(btn.dataset.mode));
+            btn.addEventListener('click', () => {
+                console.log("Nav clicked:", btn.dataset.mode);
+                this.switchMode(btn.dataset.mode);
+            });
         });
 
         // Corpus Listeners
-        this.corpusInput.addEventListener('input', () => {
-            this.updateModel();
-            localStorage.setItem('symphony_corpus', this.corpusInput.value);
-        });
+        if (this.corpusInput) {
+            this.corpusInput.addEventListener('input', () => {
+                this.updateModel();
+                localStorage.setItem('symphony_corpus', this.corpusInput.value);
+            });
+        }
 
         // Global Settings
-        this.ngramSelect.addEventListener('change', () => this.updateModel());
-        this.lengthSlider.addEventListener('input', () => {
-            this.lengthValDisplay.textContent = `${this.lengthSlider.value} words`;
-        });
+        if (this.ngramSelect) {
+            this.ngramSelect.addEventListener('change', () => this.updateModel());
+        }
+        
+        if (this.lengthSlider) {
+            this.lengthSlider.addEventListener('input', () => {
+                if (this.lengthValDisplay) this.lengthValDisplay.textContent = `${this.lengthSlider.value} words`;
+            });
+        }
 
         // Actions
-        this.generateBtn.addEventListener('click', () => this.handleGenerate());
-        this.resetBtn.addEventListener('click', () => {
-            this.corpusInput.value = DEFAULT_CORPUS;
-            this.updateModel();
-            localStorage.setItem('symphony_corpus', DEFAULT_CORPUS);
-        });
+        if (this.generateBtn) {
+            this.generateBtn.onclick = () => {
+                console.log("Generate button clicked!");
+                this.handleGenerate();
+            };
+        }
+        
+        if (this.resetBtn) {
+            this.resetBtn.onclick = () => {
+                this.corpusInput.value = DEFAULT_CORPUS;
+                this.updateModel();
+                localStorage.setItem('symphony_corpus', DEFAULT_CORPUS);
+            };
+        }
 
         // Mode 3: Interactive
-        this.interactiveEditor.addEventListener('input', () => this.handleInteractiveInput());
-        this.interactiveEditor.addEventListener('keydown', (e) => this.handleInteractiveKeys(e));
+        if (this.interactiveEditor) {
+            this.interactiveEditor.addEventListener('input', () => this.handleInteractiveInput());
+            this.interactiveEditor.addEventListener('keydown', (e) => this.handleInteractiveKeys(e));
+        }
 
-        this.copyBtn.addEventListener('click', () => {
-            navigator.clipboard.writeText(this.poemDisplay.innerText);
-            this.copyBtn.textContent = "Copied!";
-            setTimeout(() => this.copyBtn.textContent = "Copy to Clipboard", 2000);
-        });
+        if (this.copyBtn) {
+            this.copyBtn.addEventListener('click', () => {
+                navigator.clipboard.writeText(this.poemDisplay.innerText);
+                this.copyBtn.textContent = "Copied!";
+                setTimeout(() => this.copyBtn.textContent = "Copy to Clipboard", 2000);
+            });
+        }
 
-        this.populateSeeds();
+        try {
+            this.populateSeeds();
+        } catch (e) { console.warn("Failed to populate seeds:", e); }
     }
 
     switchMode(modeId) {
@@ -2086,14 +2120,22 @@ class SymphonyStudio {
     }
 
     updateModel() {
-        const text = this.corpusInput.value.toLowerCase();
-        // Improve regex to include contractions and punctuation as separate tokens if needed
-        this.currentTokens = text.match(/[\w']+|[.,!?;]/g) || [];
-        this.tokenCountDisplay.textContent = `Tokens: ${this.currentTokens.length}`;
+        console.log("♻️ Updating Markov Model...");
+        if (!this.corpusInput) {
+            console.warn("⚠️ corpus-input not found");
+            return;
+        }
+        const text = this.corpusInput.value || "";
+        this.currentTokens = text.toLowerCase().match(/[\w']+|[.,!?;]/g) || [];
+        
+        if (this.tokenCountDisplay) {
+            this.tokenCountDisplay.textContent = `Tokens: ${this.currentTokens.length}`;
+        }
 
-        const n = parseInt(this.ngramSelect.value);
+        const n = (this.ngramSelect) ? (parseInt(this.ngramSelect.value) || 2) : 2;
         this.currentChain = this.buildChain(this.currentTokens, n);
         this.populateSeeds();
+        console.log(`📊 Model Updated: ${this.currentTokens.length} tokens, ${this.currentChain.size} unique states.`);
     }
 
     buildChain(tokens, n) {
@@ -2218,41 +2260,73 @@ class SymphonyStudio {
 
     // --- Generation ---
     async handleGenerate() {
-        if (this.currentTokens.length < 5) return;
+        // Ensure model is updated before we try generating
+        this.updateModel();
+
+        if (this.currentTokens.length < 2 && this.activeMode !== 'mode-seed') {
+            alert("Please provide some training text first!");
+            return;
+        }
 
         this.generateBtn.disabled = true;
-        this.generateBtn.textContent = "Composing...";
+        this.generateBtn.textContent = "🧠 Consulting Strategic Brain...";
         this.poemDisplay.innerHTML = '';
 
-        const n = parseInt(this.ngramSelect.value);
-        const length = parseInt(this.lengthSlider.value);
-
+        const n = parseInt(this.ngramSelect.value) || 2;
+        const length = parseInt(this.lengthSlider.value) || 40;
         let poemTokens = [];
 
-        if (this.activeMode === 'mode-seed' && this.selectedSeeds.size > 0) {
-            // Find a state that contains one of the seed words
-            const seedsArr = Array.from(this.selectedSeeds);
-            const seed = seedsArr[Math.floor(Math.random() * seedsArr.length)];
+        try {
+            console.log("📡 Calling Strategic Brain API...");
+            // Attempt to call the Advanced Python Brain with manual timeout
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 4000);
 
-            const possibleStates = Array.from(this.currentChain.keys()).filter(s => s.includes(seed));
-            if (possibleStates.length > 0) {
-                let current = possibleStates[Math.floor(Math.random() * possibleStates.length)];
-                poemTokens = this.generateFromState(current, n, length);
+            const response = await fetch(`http://localhost:8000/generate?strategy=forward&length=${length}`, {
+                method: 'GET',
+                signal: controller.signal
+            });
+            clearTimeout(timeoutId);
+
+            if (response.ok) {
+                const data = await response.json();
+                poemTokens = data.poem.split(/\s+/);
+                console.log("🚀 Strategic Brain delivered the poem!");
+            } else {
+                throw new Error("Brain Offline");
+            }
+        } catch (err) {
+            console.warn("⚠️ Strategic Brain offline/error. Falling back to Local JS Logic.", err);
+            this.generateBtn.textContent = "Composing (Local)...";
+            
+            if (this.activeMode === 'mode-seed' && this.selectedSeeds.size > 0) {
+                const seedsArr = Array.from(this.selectedSeeds);
+                const seed = seedsArr[Math.floor(Math.random() * seedsArr.length)];
+                const possibleStates = Array.from(this.currentChain.keys()).filter(s => s.includes(seed));
+                if (possibleStates.length > 0) {
+                    let current = possibleStates[Math.floor(Math.random() * possibleStates.length)];
+                    poemTokens = this.generateFromState(current, n, length);
+                } else {
+                    poemTokens = this.generateNormally(n, length);
+                }
             } else {
                 poemTokens = this.generateNormally(n, length);
             }
-        } else {
-            poemTokens = this.generateNormally(n, length);
+        } finally {
+            if (poemTokens && poemTokens.length > 0) {
+                await this.animatePoem(poemTokens);
+            }
+            this.generateBtn.disabled = false;
+            this.generateBtn.textContent = "Generate Poem";
+            this.copyBtn.classList.remove('invisible');
         }
-
-        await this.animatePoem(poemTokens);
-
-        this.generateBtn.disabled = false;
-        this.generateBtn.textContent = "Generate Poem";
-        this.copyBtn.classList.remove('invisible');
     }
 
     generateNormally(n, length) {
+        if (!this.currentChain || this.currentChain.size === 0) {
+            console.warn("Attempted to generate from empty chain.");
+            return ["..."];
+        }
         const states = Array.from(this.currentChain.keys());
         const start = states[Math.floor(Math.random() * states.length)];
         return this.generateFromState(start, n, length);
@@ -2351,4 +2425,28 @@ class SymphonyStudio {
     }
 }
 
-document.addEventListener('DOMContentLoaded', () => new SymphonyStudio());
+document.addEventListener('DOMContentLoaded', () => {
+    new SymphonyStudio();
+    
+    // --- Strategic Brain Heartbeat ---
+    async function checkBrainStatus() {
+        const indicator = document.getElementById('brain-indicator');
+        if (!indicator) return;
+        
+        try {
+            const response = await fetch('http://localhost:8000/status');
+            if (response.ok) {
+                indicator.textContent = "ONLINE (Strategic Beam Search)";
+                indicator.style.color = "#00ff9d";
+            } else {
+                throw new Error();
+            }
+        } catch (e) {
+            indicator.textContent = "OFFLINE (Local JS Mode)";
+            indicator.style.color = "#ff4d4d";
+        }
+    }
+
+    setInterval(checkBrainStatus, 5000);
+    checkBrainStatus();
+});

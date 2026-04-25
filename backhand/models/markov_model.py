@@ -99,12 +99,17 @@ class EnhancedMarkovPoet:
         self.tokens = []
         self.chain = {}
         self.rev_chain = {}
+        self.chains_by_order = {}  # Variable-Order Markov Chain (VOMC)
         self.pos_map = {}
         self.w2v_model = None
         self.corpus_vocab = set()
+        self.word_graph = {}  # Relational Graph (Word -> Word -> Weight)
+        self.thematic_reservoir = []  # Long-range coherence memory
+        self.lemma_cache = {}  # Fast lemma lookup (avoids calling nlp() per word)
 
         self._analyze_corpus()
         self._train_embeddings()
+        self._build_relational_graph()
 
     def _analyze_corpus(self):
         """
@@ -142,6 +147,52 @@ class EnhancedMarkovPoet:
                 self.pos_map[word_lower] = set()
 
             self.pos_map[word_lower].add(next_token.pos_)
+            # Cache lemma for fast lookup later
+            self.lemma_cache[word_lower] = next_token.lemma_
+
+        # --- Variable-Order Markov Chains (VOMC) ---
+        print("Building Variable-Order Chains (1-gram, 2-gram, 3-gram)...")
+        for n in range(1, 4):  # Build chains of order 1, 2, 3
+            vomc = {}
+            for i in range(len(self.tokens) - n):
+                state = tuple(t.lemma_ for t in self.tokens[i:i+n])
+                next_tok = self.tokens[i + n]
+                if state not in vomc:
+                    vomc[state] = []
+                vomc[state].append((next_tok.text, next_tok.pos_))
+            self.chains_by_order[n] = vomc
+
+    def _build_relational_graph(self):
+        """
+        Builds a Relational Word Graph where edge weights are conditioned on 
+        Semantic Similarity (GMNN-inspired Feature-dependent adjacency).
+        """
+        print("Building Semantic Relational Word Graph...")
+        doc = nlp(self.corpus_text)
+        
+        for sentence in doc.sents:
+            sent_words = [t.text.lower() for t in sentence if not t.is_punct and not t.is_space]
+            for i, w1 in enumerate(sent_words):
+                if w1 not in self.word_graph:
+                    self.word_graph[w1] = {}
+                for w2 in sent_words[i+1:]:
+                    # GMNN: The weight isn't just +1, it's (1 + similarity)
+                    sim_bonus = 0.0
+                    if self.w2v_model and w1 in self.w2v_model.wv and w2 in self.w2v_model.wv:
+                        sim_bonus = self.w2v_model.wv.similarity(w1, w2)
+                    
+                    weight_increment = 1.0 + sim_bonus
+                    
+                    if w2 not in self.word_graph[w1]:
+                        self.word_graph[w1][w2] = 0
+                    self.word_graph[w1][w2] += weight_increment
+                    
+                    # Undirected
+                    if w2 not in self.word_graph:
+                        self.word_graph[w2] = {}
+                    if w1 not in self.word_graph[w2]:
+                        self.word_graph[w2][w1] = 0
+                    self.word_graph[w2][w1] += weight_increment
 
     def _train_embeddings(self):
         """
@@ -175,66 +226,189 @@ class EnhancedMarkovPoet:
             return stresses.replace('2', '1')
         return ""
 
+    def get_graph_relational_score(self, word, history_lowers):
+        """
+        Calculates how strongly a word is connected to the previous words in the poem 
+        using the Global Word Graph. Optimized to accept pre-lowercased history.
+        """
+        if not history_lowers:
+            return 0.0
+            
+        w_lower = word.lower()
+        if w_lower not in self.word_graph:
+            return 0.0
+            
+        total_weight = 0
+        connections = self.word_graph[w_lower]
+        
+        for hist_lower in history_lowers:
+            if hist_lower in connections:
+                total_weight += connections[hist_lower]
+                
+        return total_weight / len(history_lowers)
+
+    def _get_candidates_vomc(self, lemmas):
+        """
+        Variable-Order Markov Chain lookup.
+        Tries order 3 first, falls back to 2, then 1.
+        Returns (candidates, order_used).
+        """
+        for n in [3, 2, 1]:
+            if n > len(lemmas):
+                continue
+            state = tuple(lemmas[-n:])
+            chain = self.chains_by_order.get(n, {})
+            candidates = chain.get(state, [])
+            if candidates:
+                return candidates, n
+        return [], 0
+
+    def _fast_lemma(self, word):
+        """Fast lemma lookup using pre-built cache. Falls back to lowercase."""
+        return self.lemma_cache.get(word.lower(), word.lower())
+
+    def beam_search_generate(self, length=40, beam_width=3, theme_word=None):
+        """
+        Generates a poem using Beam Search with:
+        - Variable-Order Markov Chain (VOMC) for adaptive context
+        - Graph Relational scoring for global coherence
+        - Thematic Reservoir for long-range memory
+        """
+        if not self.chain:
+            return []
+
+        # Reset thematic reservoir for this generation
+        self.thematic_reservoir = []
+
+        # Initial candidates: Top states from the Markov chain
+        initial_states = random.sample(list(self.chain.keys()), min(beam_width, len(self.chain)))
+        
+        # Beam structure: (total_score, [words], current_lemmas)
+        beam = []
+        for state in initial_states:
+            beam.append((0.0, list(state), list(state)))
+
+        pos_sequence = ["NOUN", "VERB", "ADJ", "NOUN", "ADP", "DET", "NOUN"]
+
+        for i in range(length):
+            new_beam = []
+            
+            for score, words, lemmas in beam:
+                # VOMC: Try trigram -> bigram -> unigram adaptively
+                candidates, order_used = self._get_candidates_vomc(lemmas)
+                
+                if not candidates:
+                    # Dead end: random jump with heavy penalty
+                    jump_state = random.choice(list(self.chain.keys()))
+                    new_beam.append((score - 10.0, words, list(jump_state)))
+                    continue
+
+                # Pre-calculate lowercased history for graph efficiency
+                history_lowers = [w.lower() for w in words[-5:]]
+                res_lowers = [w.lower() for w in self.thematic_reservoir[-10:]]
+
+                # Bonus for higher-order matches (more context = more stable)
+                order_bonus = order_used * 0.5
+
+                ideal_pos = pos_sequence[i % len(pos_sequence)]
+                
+                # Pre-score all candidates, then only expand the top 2
+                pre_scored = []
+                for word, pos in candidates:
+                    word_score = 1.0 + order_bonus
+                    
+                    if pos == ideal_pos:
+                        word_score += 2.0
+                    
+                    if theme_word and theme_word.lower() in self.w2v_model.wv:
+                        w_lower = word.lower()
+                        if w_lower in self.w2v_model.wv:
+                            word_score += self.w2v_model.wv.similarity(w_lower, theme_word.lower()) * 3.0
+                    
+                    graph_affinity = self.get_graph_relational_score(word, history_lowers)
+                    word_score += graph_affinity * 2.0
+
+                    if self.thematic_reservoir:
+                        reservoir_affinity = self.get_graph_relational_score(word, res_lowers)
+                        word_score += reservoir_affinity * 1.5
+                    
+                    if word.lower() in [w.lower() for w in words[-3:]]:
+                        word_score -= 5.0
+                    
+                    pre_scored.append((word, word_score))
+                
+                # Only expand the top 2 candidates (prevents exponential blowup)
+                pre_scored.sort(key=lambda x: x[1], reverse=True)
+                top_candidates = pre_scored[:2]
+                
+                for word, word_score in top_candidates:
+                    new_score = score + word_score
+                    new_words = words + [word]
+                    
+                    new_lemma = self._fast_lemma(word)
+                    new_lemmas = (lemmas + [new_lemma])[1:]
+                    
+                    new_beam.append((new_score, new_words, new_lemmas))
+            
+            # Prune beam to keep only top paths
+            new_beam.sort(key=lambda x: x[0], reverse=True)
+            beam = new_beam[:beam_width]
+
+            # Feed the thematic reservoir with the best beam's latest word
+            if beam and len(beam[0][1]) > 0:
+                latest_word = beam[0][1][-1]
+                if not re.match(r'^[.,!?;:]+$', latest_word):
+                    self.thematic_reservoir.append(latest_word)
+
+        # Return best path words
+        return beam[0][1] if beam else []
+
+    def refine_poem_relational(self, poem_words, passes=1):
+        """
+        Refines a poem using an Iterative M-Step (GMNN Refinement).
+        Tries to swap words for neighbors with higher global relational energy.
+        """
+        refined = list(poem_words)
+        
+        for p in range(passes):
+            for i in range(len(refined)):
+                current_word = refined[i]
+                if re.match(r'^[.,!?;:]+$', current_word): continue
+                
+                # Context words (neighbors in the poem)
+                context = refined[max(0, i-5):i] + refined[i+1:i+6]
+                current_score = self.get_graph_relational_score(current_word, [w.lower() for w in context])
+                
+                # Look for better relational candidates with same POS
+                current_pos = list(self.pos_map.get(current_word.lower(), ["NOUN"]))[0]
+                candidates, _ = self._get_candidates_vomc(self._fast_lemma(refined[max(0, i-1)])) # fallback candidates
+                
+                best_w = current_word
+                best_s = current_score
+                
+                for cand_w, cand_p in candidates[:10]:
+                    if cand_p == current_pos:
+                        cand_s = self.get_graph_relational_score(cand_w, [w.lower() for w in context])
+                        if cand_s > best_s:
+                            best_s = cand_s
+                            best_w = cand_w
+                
+                refined[i] = best_w
+                
+        return refined
+
     def generate_poem(self, length=40, words_per_line=6, theme_word=None):
         """
-        Advanced poem generation:
-        - POS control
-        - Semantic similarity
-        - Repetition penalty
-        - WordNet variation
+        Advanced poem generation using Beam Search + GMNN Relational Refinement.
         """
         if not self.chain:
             return "Corpus too small."
 
-        pos_sequence = ["NOUN", "VERB", "ADJ", "NOUN", "ADP", "DET", "NOUN"]
+        # E-Step: Generate draft with Strategic Beam Search
+        poem_words = self.beam_search_generate(length=length, theme_word=theme_word)
 
-        current_lemmas = list(random.choice(list(self.chain.keys())))
-        poem_words = list(current_lemmas)
-
-        for i in range(length):
-            state = tuple(current_lemmas)
-            candidates = self.chain.get(state, [])
-
-            if not candidates:
-                current_lemmas = list(random.choice(list(self.chain.keys())))
-                continue
-
-            ideal_pos = pos_sequence[i % len(pos_sequence)]
-            scored_candidates = []
-
-            for word, pos in candidates:
-                score = 1.0
-
-                # POS bonus
-                if pos == ideal_pos:
-                    score += 2.0
-
-                # Semantic similarity
-                if theme_word and theme_word.lower() in self.w2v_model.wv:
-                    w_lower = word.lower()
-
-                    if w_lower in self.w2v_model.wv:
-                        similarity = self.w2v_model.wv.similarity(
-                            w_lower, theme_word.lower()
-                        )
-                        score += similarity * 3.0
-
-                # repetition penalty
-                if word.lower() in [pw.lower() for pw in poem_words[-3:]]:
-                    score -= 5.0
-
-                scored_candidates.append((word, score))
-
-            # choose from best half
-            scored_candidates.sort(key=lambda x: x[1], reverse=True)
-            best_pool = scored_candidates[:max(1, len(scored_candidates)//2)]
-
-            chosen_word = random.choice(best_pool)[0]
-            poem_words.append(chosen_word)
-
-            # update state (lemma)
-            doc_word = nlp(chosen_word)
-            current_lemmas = (current_lemmas + [doc_word[0].lemma_])[1:]
+        # M-Step: Iterative Relational Refinement (GMNN)
+        poem_words = self.refine_poem_relational(poem_words, passes=2)
 
         # WordNet variation
         final_words = []
@@ -304,8 +478,7 @@ class EnhancedMarkovPoet:
                     target_word = rhyme_anchors[rh_char]
 
             # Generate line backwards from target_word
-            doc_target = nlp(target_word)
-            target_lemma = doc_target[0].lemma_
+            target_lemma = self._fast_lemma(target_word)
 
             possible_rev_states = [s for s in self.rev_chain.keys() if s[-1] == target_lemma]
             line_words = [target_word]
@@ -324,7 +497,7 @@ class EnhancedMarkovPoet:
                         current_rev_state = random.choice(list(self.rev_chain.keys()))
                         continue
 
-                    # Score candidates based on semantic bias if needed
+                    # Score candidates based on semantic bias and Graph Relational coherence
                     scored_candidates = []
                     for word, pos in candidates:
                         score = 1.0
@@ -332,6 +505,11 @@ class EnhancedMarkovPoet:
                             w_lower = word.lower()
                             if w_lower in self.w2v_model.wv:
                                 score += self.w2v_model.wv.similarity(w_lower, theme_word.lower()) * 3.0
+                        
+                        # Graph Relational bias
+                        graph_affinity = self.get_graph_relational_score(word, line_words)
+                        score += graph_affinity * 2.5 # Slightly higher weight for rhymed coherence
+                        
                         scored_candidates.append((word, score))
                         
                     scored_candidates.sort(key=lambda x: x[1], reverse=True)
@@ -340,8 +518,7 @@ class EnhancedMarkovPoet:
 
                     line_words.insert(0, chosen_word)
 
-                    doc_word = nlp(chosen_word)
-                    current_rev_state = (doc_word[0].lemma_,) + current_rev_state[:-1]
+                    current_rev_state = (self._fast_lemma(chosen_word),) + current_rev_state[:-1]
             else:
                 for i in range(words_per_line - 1):
                     line_words.insert(0, random.choice(list(self.corpus_vocab)))
@@ -387,38 +564,52 @@ class EnhancedMarkovPoet:
                 state = tuple(current_lemmas)
                 candidates = self.chain.get(state, [])
 
-                valid_candidates = []
+                # Score candidates based on semantic bias and Graph Coherence
+                scored_candidates = []
                 for word, pos in candidates:
+                    score = 1.0
+                    
                     stress = self.get_word_stress(word)
-                    if stress == "":
+                    if stress == "" or not current_target.startswith(stress):
                         continue
-                        
-                    if current_target.startswith(stress):
-                        valid_candidates.append((word, stress))
-                
-                if valid_candidates:
-                    chosen_word, chosen_stress = random.choice(valid_candidates)
+
+                    # Semantic bias
+                    if theme_word and theme_word.lower() in self.w2v_model.wv:
+                        w_lower = word.lower()
+                        if w_lower in self.w2v_model.wv:
+                            score += self.w2v_model.wv.similarity(w_lower, theme_word.lower()) * 3.0
+                    
+                    # Graph Relational bias
+                    graph_affinity = self.get_graph_relational_score(word, line_words)
+                    score += graph_affinity * 2.0
+                    
+                    scored_candidates.append((word, score, stress))
+                    
+                if scored_candidates:
+                    scored_candidates.sort(key=lambda x: x[1], reverse=True)
+                    best_pool = scored_candidates[:max(1, len(scored_candidates)//2)]
+                    chosen_word, _, chosen_stress = random.choice(best_pool)
                     
                     line_words.append(chosen_word)
                     current_target = current_target[len(chosen_stress):]
-                    doc_word = nlp(chosen_word)
-                    current_lemmas = (current_lemmas + [doc_word[0].lemma_])[1:]
+                    current_lemmas = (current_lemmas + [self._fast_lemma(chosen_word)])[1:]
                 else:
-                    # Semantic Fallback
+                    # Semantic Fallback with Graph checking
                     fallback_pool = []
                     for v in self.corpus_vocab:
                         stress = self.get_word_stress(v)
                         if stress and current_target.startswith(stress):
-                            fallback_pool.append((v, stress))
+                            g_score = self.get_graph_relational_score(v, line_words)
+                            fallback_pool.append((v, stress, g_score))
                             
                     if fallback_pool:
-                        chosen_word, chosen_stress = random.choice(fallback_pool)
+                        fallback_pool.sort(key=lambda x: x[2], reverse=True)
+                        chosen_word, chosen_stress, _ = fallback_pool[0]
                         line_words.append(chosen_word)
                         current_target = current_target[len(chosen_stress):]
-                        doc_word = nlp(chosen_word)
-                        current_lemmas = (current_lemmas + [doc_word[0].lemma_])[1:]
+                        current_lemmas = (current_lemmas + [self._fast_lemma(chosen_word)])[1:]
                     else:
-                        break # Unrecoverable dead end
+                        break
 
             formatted_line = []
             capitalize_next = False

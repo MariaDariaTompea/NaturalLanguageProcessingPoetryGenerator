@@ -145,7 +145,10 @@
         <div class="orb orb-3"></div>
     </div>
 
-    <script src="script.js?v=3"></script>
+    <div id="brain-status" style="position:fixed; bottom: 10px; right: 10px; font-size: 10px; color: rgba(255,255,255,0.3); font-family: monospace;">
+        Strategic Brain: <span id="brain-indicator" style="color: #ff4d4d;">Connecting...</span>
+    </div>
+    <script src="script.js"></script>
     <script>
         // Simple UI toggle for Model Selection
         document.getElementById('model-selector').addEventListener('change', function () {

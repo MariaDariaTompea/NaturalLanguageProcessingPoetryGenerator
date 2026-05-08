@@ -3,8 +3,8 @@ import re
 
 def get_clean_corpus(limit=10000):
     """Fetches and cleans the Gutenberg Poetry Corpus"""
-    dataset = load_dataset("allisonparrish/gutenberg-poetry-corpus", split="train")
-    lines = [line['s'].lower() for line in dataset.select(range(limit))]
+    dataset = load_dataset("biglam/gutenberg-poetry-corpus", split="train")
+    lines = [line['line'].lower() for line in dataset.select(range(limit))]
     # Basic cleaning to remove non-alphabetic noise
     return [re.sub(r'[^a-z\s]', '', line).strip() for line in lines if line.strip()]
 

@@ -1,5 +1,5 @@
-from .models.markov_model import CMPPoet
-from .utils.nlp_helpers import get_clean_corpus
+from models.markov_model import CMPPoet
+from utils.nlp_helpers import get_clean_corpus
 
 class PoetryAPI:
     def __init__(self):

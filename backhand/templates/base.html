@@ -207,8 +207,8 @@
 </head>
 <body>
     <div class="vignette"></div>
-    <div class="bg-layer" style="background-image: url('{% block bg_url %}/customs/bg_selection.png{% endblock %}')"></div>
-    
+    <div class="bg-layer" style="background-image: url('{{ url_for('static', filename='customs/bg_selection.png') }}')">
+    </div>
     {% block content %}{% endblock %}
 
     <script>

@@ -1,4 +1,0 @@
-flask
-datasets
-textblob
-pronouncing

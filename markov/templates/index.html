@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Symphony of dededeeeeeeeeeeeee</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #1a1a1a;
+            color: white;
+            text-align: center;
+            padding: 40px;
+        }
+
+        .btn-container {
+            margin-bottom: 30px;
+        }
+
+        button {
+            padding: 15px 30px;
+            margin: 10px;
+            border-radius: 25px;
+            border: none;
+            cursor: pointer;
+            font-weight: bold;
+            transition: 0.3s;
+        }
+
+        .btn-stanza {
+            background: #3498db;
+            color: white;
+        }
+
+        .btn-lyrics {
+            background: #e67e22;
+            color: white;
+        }
+
+        .output {
+            background: #2c3e50;
+            display: inline-block;
+            padding: 30px;
+            border-radius: 15px;
+            text-align: left;
+            min-width: 400px;
+        }
+
+        .section-title {
+            color: #f1c40f;
+            font-size: 0.9em;
+            text-transform: uppercase;
+            margin-bottom: 10px;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>Symphony of Words</h1>
+    <div class="btn-container">
+        <form method="post" style="display: inline;">
+            <button type="submit" name="action" value="stanza" class="btn-stanza">Dörtlük Yaz (Stanza)</button>
+            <button type="submit" name="action" value="lyrics" class="btn-lyrics">Şarkı Yaz (Full Lyrics)</button>
+        </form>
+    </div>
+
+    {% if result %}
+    <div class="output">
+        {% if mode == "stanza" %}
+        {% for line in result %}<p>{{ line }}</p>{% endfor %}
+        {% else %}
+        {% for section, lines in result.items() %}
+        <div class="section-title">[{{ section }}]</div>
+        {% for line in lines %}<p>{{ line }}</p>{% endfor %}<br>
+        {% endfor %}
+        {% endif %}
+    </div>
+    {% endif %}
+</body>
+
+</html>

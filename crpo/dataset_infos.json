@@ -1,0 +1,37 @@
+{"cakiki--gutenberg-poetry-corpus": {
+    "description": "",
+    "citation": "",
+    "homepage": "",
+    "license": "",
+    "features": {
+        "line": {
+            "dtype": "string",
+            "id": null,
+            "_type": "Value"
+        },
+        "gutenberg_id": {
+            "dtype": "int64",
+            "id": null,
+            "_type": "Value"
+        }
+    },
+    "post_processed": null,
+    "supervised_keys": null,
+    "task_templates": null,
+    "builder_name": null,
+    "config_name": null,
+    "version": null,
+    "splits": {
+        "train": {
+            "name": "train",
+            "num_bytes": 155666151,
+            "num_examples": 3085117,
+            "dataset_name": "gutenberg-poetry-corpus"
+        }
+    },
+    "download_checksums": null,
+    "download_size": 91142247,
+    "post_processing_size": null,
+    "dataset_size": 155666151,
+    "size_in_bytes": 246808398
+}}

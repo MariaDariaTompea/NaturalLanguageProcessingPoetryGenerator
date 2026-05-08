@@ -1,0 +1,474 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <title>Full-FACE Poetry Generator</title>
+    <style>
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      body { 
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        min-height: 100vh;
+        padding: 2rem;
+      }
+      .container { max-width: 900px; margin: 0 auto; }
+      .header { text-align: center; color: white; margin-bottom: 2rem; }
+      .header h1 { font-size: 2.5rem; margin-bottom: 0.5rem; }
+      .header p { font-size: 1.1rem; opacity: 0.9; }
+      
+      .card {
+        background: white;
+        border-radius: 12px;
+        padding: 2rem;
+        margin-bottom: 1.5rem;
+        box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+      }
+      
+      .controls { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+      .control-group { display: flex; flex-direction: column; }
+      label { font-weight: 600; margin-bottom: 0.5rem; color: #333; }
+      select, input { 
+        padding: 0.75rem;
+        border: 2px solid #e0e0e0;
+        border-radius: 6px;
+        font-size: 1rem;
+      }
+      select:focus, input:focus { outline: none; border-color: #667eea; }
+      
+      .button-group { display: flex; gap: 1rem; grid-column: 1/-1; margin-top: 1rem; }
+      button {
+        flex: 1;
+        padding: 0.75rem 1.5rem;
+        background: #667eea;
+        color: white;
+        border: none;
+        border-radius: 6px;
+        font-size: 1rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: background 0.2s;
+      }
+      button:hover { background: #5568d3; }
+      button:disabled { background: #ccc; cursor: not-allowed; }
+      
+      .mood-badge {
+        display: inline-block;
+        padding: 0.5rem 1rem;
+        border-radius: 20px;
+        font-weight: 600;
+        font-size: 0.9rem;
+        margin-bottom: 1rem;
+      }
+      .mood-positive { background: #d4edda; color: #155724; }
+      .mood-negative { background: #f8d7da; color: #721c24; }
+      .mood-neutral { background: #e2e3e5; color: #383d41; }
+      
+      .poem-section {
+        background: #f8f9fa;
+        padding: 1.5rem;
+        border-radius: 8px;
+        margin-bottom: 1rem;
+        border-left: 4px solid #667eea;
+      }
+      
+      .word {
+        cursor: help;
+        border-bottom: 1px dotted #667eea;
+        position: relative;
+        display: inline;
+      }
+
+      .tooltip {
+        visibility: hidden;
+        background-color: #333;
+        color: #fff;
+        text-align: left;
+        border-radius: 6px;
+        padding: 0.75rem;
+        position: absolute;
+        z-index: 1000;
+        bottom: 125%;
+        left: 50%;
+        transform: translateX(-50%);
+        white-space: nowrap;
+        font-size: 0.85rem;
+        font-style: normal;
+        border: 1px solid #667eea;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+        max-width: 300px;
+        white-space: normal;
+        font-weight: normal;
+      }
+
+      .tooltip::after {
+        content: "";
+        position: absolute;
+        top: 100%;
+        left: 50%;
+        margin-left: -5px;
+        border-width: 5px;
+        border-style: solid;
+        border-color: #333 transparent transparent transparent;
+      }
+
+      .word:hover .tooltip {
+        visibility: visible;
+      }
+
+      .tooltip.loading {
+        white-space: nowrap;
+      }
+
+      .tooltip.error {
+        background-color: #d32f2f;
+      }
+      
+      .metadata {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        gap: 1rem;
+        margin: 1.5rem 0;
+      }
+      
+      .metadata-item {
+        background: white;
+        padding: 1rem;
+        border-radius: 6px;
+        border-left: 3px solid #667eea;
+      }
+      .metadata-label { font-size: 0.85rem; color: #666; font-weight: 600; }
+      .metadata-value { font-size: 1.3rem; color: #333; font-weight: 700; margin-top: 0.3rem; }
+      
+      .aesthetics {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1rem;
+        margin: 1rem 0;
+      }
+      
+      .aesthetic-score {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 1rem;
+        border-radius: 8px;
+        text-align: center;
+      }
+      .aesthetic-score-label { font-size: 0.9rem; opacity: 0.9; }
+      .aesthetic-score-value { font-size: 2rem; font-weight: 700; }
+      
+      .commentary {
+        background: #fff3cd;
+        border-left: 4px solid #ffc107;
+        padding: 1rem;
+        border-radius: 6px;
+        margin: 1rem 0;
+        color: #856404;
+      }
+      
+      .loading { text-align: center; color: #666; padding: 2rem; }
+      .error { 
+        background: #f8d7da;
+        color: #721c24;
+        padding: 1rem;
+        border-radius: 6px;
+        margin: 1rem 0;
+      }
+      
+      .stanza-separator { text-align: center; margin: 1.5rem 0; color: #999; }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="header">
+        <h1>Full-FACE Poetry Generator</h1>
+        <p>Generate meaningful English poetry using the Gutenberg Corpus with constraint-based composition</p>
+      </div>
+
+      <div class="card">
+        <h2>Configuration</h2>
+        <div class="controls">
+          <div class="control-group">
+            <label for="nounPhrase">Noun Phrase (Optional)</label>
+            <input id="nounPhrase" type="text" placeholder="e.g., 'moonlit river', 'silent forest'" />
+          </div>
+          <div class="control-group">
+            <label for="template">Template Type</label>
+            <select id="template">
+              <option value="free">Free Form</option>
+              <option value="couplet">Couplet</option>
+              <option value="quatrain">Quatrain</option>
+            </select>
+          </div>
+          <div class="control-group">
+            <label for="stanzas">Number of Stanzas</label>
+            <input id="stanzas" type="number" value="2" min="1" max="5" />
+          </div>
+          <div class="button-group">
+            <button onclick="generatePoem()">Generate Poem</button>
+            <button onclick="getMood()">Check Mood</button>
+          </div>
+        </div>
+      </div>
+
+      <div id="moodSection" class="card" style="display:none;">
+        <h3>Corpus Mood</h3>
+        <div id="moodContent"></div>
+      </div>
+
+      <div id="poemSection" class="card" style="display:none;">
+        <h2>Generated Poem</h2>
+        
+        <div id="moodBadge"></div>
+        
+        <div class="poem-section" id="poemContent"></div>
+        
+        <div class="metadata" id="metadataContent"></div>
+        
+        <div>
+          <h3 style="margin: 1.5rem 0 1rem; color: #333;">Aesthetic Analysis</h3>
+          <div class="aesthetics" id="aestheticsContent"></div>
+        </div>
+        
+        <div class="commentary" id="commentaryContent"></div>
+      </div>
+
+      <div id="errorSection" class="card error" style="display:none;">
+        <p id="errorMessage"></p>
+      </div>
+
+      <div id="loadingSection" class="loading" style="display:none;">
+        <p>Generating poem from Gutenberg corpus...</p>
+      </div>
+    </div>
+
+    <script>
+      const definitionCache = {};
+
+      async function fetchWordDefinition(word) {
+        if (!word || word.length < 2) return "Word too short";
+        
+        if (definitionCache[word]) {
+          return definitionCache[word];
+        }
+
+        try {
+          const response = await fetch(`https://api.dictionaryapi.dev/api/v2/entries/en/${word}`);
+          
+          if (!response.ok) {
+            return "No definition found";
+          }
+
+          const data = await response.json();
+          
+          if (data.length > 0) {
+            const entry = data[0];
+            let definition = "";
+            
+            // Try to get the first definition
+            if (entry.meanings && entry.meanings.length > 0) {
+              const meaning = entry.meanings[0];
+              if (meaning.definitions && meaning.definitions.length > 0) {
+                definition = meaning.definitions[0].definition;
+              }
+            }
+            
+            if (!definition) {
+              definition = "Definition available but format unclear";
+            }
+
+            definitionCache[word] = definition;
+            return definition;
+          }
+
+          return "No definition found";
+        } catch (error) {
+          return "Unable to fetch definition";
+        }
+      }
+
+      function attachWordDefinitions() {
+        const wordSpans = document.querySelectorAll('.word');
+        
+        wordSpans.forEach(span => {
+          const word = span.getAttribute('data-word');
+          const tooltip = span.querySelector('.tooltip');
+          
+          span.addEventListener('mouseenter', async () => {
+            tooltip.classList.add('loading');
+            const definition = await fetchWordDefinition(word);
+            tooltip.textContent = definition;
+            tooltip.classList.remove('loading');
+          });
+        });
+      }
+
+      function showLoading() {
+        document.getElementById('loadingSection').style.display = 'block';
+        document.getElementById('poemSection').style.display = 'none';
+        document.getElementById('errorSection').style.display = 'none';
+      }
+
+      function hideLoading() {
+        document.getElementById('loadingSection').style.display = 'none';
+      }
+
+      function showError(message) {
+        document.getElementById('errorMessage').textContent = message;
+        document.getElementById('errorSection').style.display = 'block';
+      }
+
+      async function generatePoem() {
+        showLoading();
+        
+        const template = document.getElementById('template').value;
+        const stanzas = document.getElementById('stanzas').value;
+        const nounPhrase = document.getElementById('nounPhrase').value;
+
+        try {
+          const params = new URLSearchParams({
+            template: template,
+            stanzas: stanzas
+          });
+          if (nounPhrase) {
+            params.append('noun_phrase', nounPhrase);
+          }
+
+          const response = await fetch(`/api/generate?${params.toString()}`);
+          const text = await response.text();
+
+          hideLoading();
+
+          if (!response.ok) {
+            let message = text;
+            try {
+              const errorData = JSON.parse(text);
+              message = errorData.error || errorData.message || JSON.stringify(errorData);
+            } catch (parseError) {
+              // Keep raw text if it is not JSON
+            }
+            throw new Error(`Server error (${response.status}): ${message}`);
+          }
+
+          let data;
+          try {
+            data = JSON.parse(text);
+          } catch (parseError) {
+            throw new Error('Received invalid JSON from server.');
+          }
+
+          if (data.error) {
+            showError(data.error);
+            return;
+          }
+
+          displayPoem(data);
+        } catch (error) {
+          hideLoading();
+          showError('Error generating poem: ' + error.message);
+        }
+      }
+
+      function displayPoem(data) {
+        const { poem, metadata, aesthetic_score, aesthetics, commentary } = data;
+
+        // Poem display with interactive words
+        let poemHTML = '';
+        let lineCount = 0;
+        for (const line of poem) {
+          if (lineCount > 0 && lineCount % metadata.lines_per_stanza === 0) {
+            poemHTML += '<div class="stanza-separator">✦</div>';
+          }
+          
+          // Wrap each word for hover definitions
+          const words = line.split(' ');
+          const wordSpans = words.map(word => {
+            const cleanWord = word.replace(/[.,!?;:'"]/g, '');
+            return `<span class="word" data-word="${cleanWord.toLowerCase()}">
+              ${word}
+              <span class="tooltip loading">Loading...</span>
+            </span>`;
+          }).join(' ');
+          
+          poemHTML += `<div class="poem-line">${wordSpans}</div>`;
+          lineCount++;
+        }
+        document.getElementById('poemContent').innerHTML = poemHTML;
+
+        // Attach word definition fetcher
+        attachWordDefinitions();
+
+        // Mood badge
+        const moodClass = `mood-${metadata.sentiment.toLowerCase()}`;
+        document.getElementById('moodBadge').innerHTML = 
+          `<div class="mood-badge ${moodClass}">${metadata.sentiment.toUpperCase()} • ${metadata.mood.toUpperCase()}</div>`;
+
+        // Metadata
+        const metadataHTML = `
+          <div class="metadata-item">
+            <div class="metadata-label">Template</div>
+            <div class="metadata-value">${metadata.template}</div>
+          </div>
+          <div class="metadata-item">
+            <div class="metadata-label">Lines</div>
+            <div class="metadata-value">${poem.length}</div>
+          </div>
+          <div class="metadata-item">
+            <div class="metadata-label">Stanzas</div>
+            <div class="metadata-value">${metadata.stanzas}</div>
+          </div>
+          <div class="metadata-item">
+            <div class="metadata-label">Mood</div>
+            <div class="metadata-value">${metadata.mood}</div>
+          </div>
+          ${metadata.noun_phrase ? `<div class="metadata-item">
+            <div class="metadata-label">Theme</div>
+            <div class="metadata-value">${metadata.noun_phrase}</div>
+          </div>` : ''}
+        `;
+        document.getElementById('metadataContent').innerHTML = metadataHTML;
+
+        // Aesthetics
+        let aestheticsHTML = `
+          <div class="aesthetic-score">
+            <div class="aesthetic-score-label">Overall Aesthetic</div>
+            <div class="aesthetic-score-value">${aesthetic_score.toFixed(1)}</div>
+          </div>
+        `;
+        for (const [key, value] of Object.entries(aesthetics)) {
+          aestheticsHTML += `
+            <div class="aesthetic-score">
+              <div class="aesthetic-score-label">${key.replace(/_/g, ' ').toUpperCase()}</div>
+              <div class="aesthetic-score-value">${value.toFixed(1)}</div>
+            </div>
+          `;
+        }
+        document.getElementById('aestheticsContent').innerHTML = aestheticsHTML;
+
+        // Commentary
+        document.getElementById('commentaryContent').textContent = commentary;
+
+        document.getElementById('poemSection').style.display = 'block';
+      }
+
+      async function getMood() {
+        try {
+          const response = await fetch('/api/mood');
+          const data = await response.json();
+          
+          const moodClass = `mood-${data.mood.toLowerCase()}`;
+          document.getElementById('moodContent').innerHTML =
+            `<p>The corpus mood is currently <strong class="${moodClass}" style="padding: 0.25rem 0.75rem; border-radius: 4px; display: inline-block;">${data.mood.toUpperCase()}</strong></p>`;
+          document.getElementById('moodSection').style.display = 'block';
+        } catch (error) {
+          showError('Error fetching mood: ' + error.message);
+        }
+      }
+
+      // Auto-load on page ready
+      document.addEventListener('DOMContentLoaded', () => {
+        // Optional: pre-generate on load
+      });
+    </script>
+  </body>
+</html>
+

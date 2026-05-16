@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block title %}Choose Your Muse{% endblock %}
+{% block bg_url %}/static/images/bg_selection.png{% endblock %}
+
+{% block content %}
+<div class="container"
+    style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh;">
+    <h1 class="animate-enter" style="font-size: 3em; margin-bottom: 50px;">Choose Your Muse</h1>
+
+    <div style="display: flex; flex-direction: column; gap: 20px;">
+        <div class="btn-image animate-enter"
+            style="width: 400px; height: 180px; background-image: url('/static/images/MARKOV BUTTON.png');"
+            onclick="transitionTo('/markov', this)"></div>
+
+        <div class="btn-image animate-enter"
+            style="width: 400px; height: 180px; background-image: url('/static/images/CRPO.png'); animation-delay: 0.2s;"
+            onclick="transitionTo('/crpo', this)"></div>
+    </div>
+
+    <p style="margin-top: 40px; color: var(--text-dim);">
+        Markov: Coherent Trigram Sequences [cite: 14] | CRPO: Semantic Optimization [cite: 31, 314]
+    </p>
+</div>
+{% endblock %}

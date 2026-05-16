@@ -1,0 +1,142 @@
+{% extends "base.html" %}
+{% block title %}CRPO | Symphony of Words{% endblock %}
+{% block bg_url %}/static/images/bg_models.png{% endblock %}
+
+{% block content %}
+<div class="container animate-enter">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 40px;">
+        <h1>CRPO Engine</h1>
+        <button class="nav-btn" onclick="window.location.href='/'">Back to Portals</button>
+    </div>
+
+    <div class="card glass-card"
+        style="border: 2px solid var(--highlight-gold); border-radius: 30px; box-shadow: 0 0 20px rgba(255, 207, 64, 0.2);">
+        <h3 style="margin-top: 0; color: var(--highlight-gold);">Semantic Palette</h3>
+        <p class="hint">Select a single keyword to guide the generation:</p>
+
+        <div class="word-chips"
+            style="justify-content: center; margin-bottom: 30px; display: flex; flex-wrap: wrap; gap: 12px;">
+            {% for word in popular_words %}
+            <div class="chip {% if word == selected_seed %}active{% endif %}"
+                style="border: 1px solid rgba(255, 255, 255, 0.2); transition: all 0.3s ease;"
+                onclick="selectSingleSeed('{{ word }}', this)">
+                {{ word }}
+            </div>
+            {% endfor %}
+        </div>
+
+        <form method="post" id="gen-form">
+            <div class="settings-grid" style="margin-bottom: 25px;">
+                <div class="setting">
+                    <label style="color: var(--primary-color); font-weight: 600;">Poetic Architecture:</label>
+                    <select name="poetic_form"
+                        style="width: 100%; padding: 12px; border-radius: 15px; background: rgba(0,0,0,0.5); color: white; border: 1px solid var(--glass-border); cursor: pointer;">
+                        <option value="quatrain">Quatrain (4 Lines)</option>
+                        <option value="haiku">Haiku</option>
+                        <option value="sonnet">Sonnet</option>
+                    </select>
+                </div>
+            </div>
+
+            <div style="position: relative; width: 100%; margin-bottom: 25px;">
+                <input type="text" id="seed-input" name="seed_word" readonly
+                    placeholder="Click a button above to select..."
+                    style="width: 100%; padding: 15px; border-radius: 15px; background: rgba(0,0,0,0.3); color: var(--highlight-gold); border: 1px solid var(--highlight-gold); font-weight: bold; text-align: center;"
+                    value="{{ selected_seed if selected_seed else '' }}">
+                <span onclick="clearSelection()"
+                    style="position: absolute; right: 15px; top: 15px; cursor: pointer; color: var(--highlight-red); font-weight: bold; font-size: 1.2em;">✕</span>
+            </div>
+
+            <div style="text-align: center;">
+                <button type="submit" class="btn-image"
+                    style="width: 250px; height: 120px; background-image: url('/static/images/GENERATE COUPLET.png'); cursor: pointer;"></button>
+            </div>
+        </form>
+    </div>
+
+    {% if result %}
+    <div class="output-section animate-enter" style="margin-top: 40px; 
+                    background: rgba(20, 11, 31, 0.9); /* Daha koyu ve az şeffaf bir mor/siyah */
+                    backdrop-filter: blur(20px); /* Arkayı daha çok bulandırır */
+                    border: 2px solid var(--highlight-gold); 
+                    border-radius: 30px; 
+                    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5), 0 0 20px rgba(255, 207, 64, 0.1); 
+                    padding: 3rem;
+                    display: block;">
+    
+        {% for section, lines in result.items() %}
+        <h2
+            style="color: var(--highlight-gold); text-transform: uppercase; letter-spacing: 3px; font-size: 1.5rem; margin-bottom: 25px; text-shadow: 0 0 10px rgba(255, 207, 64, 0.4); text-align: center;">
+            {{ section }}
+        </h2>
+    
+        <div class="poem-area"
+            style="background: transparent; min-height: auto; padding: 0; margin-bottom: 30px; text-align: center;">
+            {% for line in lines %}
+            <p
+                style="margin-bottom: 12px; font-size: 1.5rem; color: #F3EFFF; line-height: 1.8; font-family: 'Playfair Display', serif; font-style: italic;">
+                {{ line }}
+            </p>
+            {% endfor %}
+        </div>
+    
+        {% if not loop.last %}
+        <div
+            style="height: 1px; background: linear-gradient(to right, transparent, var(--highlight-gold), transparent); margin: 40px auto; width: 60%; opacity: 0.3;">
+        </div>
+        {% endif %}
+        {% endfor %}
+    </div>
+    {% endif %}
+</div>
+
+<script>
+    function selectSingleSeed(word, element) {
+        const input = document.getElementById('seed-input');
+
+        // 1. Önceki tüm aktif sınıfları temizle (Sadece bir seçim olması için)
+        document.querySelectorAll('.chip').forEach(c => {
+            c.classList.remove('active');
+            c.style.borderColor = 'rgba(255, 255, 255, 0.2)';
+            c.style.boxShadow = 'none';
+        });
+
+        // 2. Tıklananı aktif yap ve vurgula
+        element.classList.add('active');
+        element.style.borderColor = 'var(--highlight-gold)';
+        element.style.boxShadow = '0 0 10px rgba(255, 207, 64, 0.4)';
+
+        // 3. Input değerini üst üste eklemek yerine direkt üzerine yaz
+        input.value = word;
+    }
+
+    function clearSelection() {
+        document.getElementById('seed-input').value = '';
+        document.querySelectorAll('.chip').forEach(c => {
+            c.classList.remove('active');
+            c.style.borderColor = 'rgba(255, 255, 255, 0.2)';
+            c.style.boxShadow = 'none';
+        });
+    }
+</script>
+
+<style>
+    /* Buton olduğu belli olsun diye ek görsel efektler */
+    .chip {
+        cursor: pointer;
+        background: rgba(255, 255, 255, 0.05);
+        padding: 10px 20px;
+        border-radius: 20px;
+    }
+
+    .chip:hover {
+        background: rgba(102, 252, 241, 0.1);
+        transform: translateY(-2px);
+    }
+
+    .chip.active {
+        background: var(--primary-color) !important;
+        color: var(--bg-color) !important;
+    }
+</style>
+{% endblock %}

@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Symphony of Words{% endblock %}</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&display=swap');
+
+        /* ... mevcut CSS kök değişkenleri aynı kalabilir ... */
+        :root {
+            --deep-royal: #2A1238;
+            --main-ui-purple: #4B1F63;
+            --vibrant-purple: #6F2C91;
+            --soft-glow-purple: #9A52C7;
+            --magical-lavender: #C58AF9;
+            --dark-bg-purple: #140B1F;
+            --bright-gold: #F6D86B;
+            --warm-gold: #E8B84D;
+            --antique-gold: #C98A2B;
+            --main-bg: #0D0814;
+            --card-bg: #22152F;
+            --dark-gold: #8B5A1E;
+        }
+
+        body {
+            font-family: 'Outfit', sans-serif;
+            background-color: var(--main-bg);
+            color: #F3EFFF;
+            margin: 0;
+            min-height: 100vh;
+        }
+
+        .bg-layer {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-size: cover;
+            background-position: center;
+            z-index: -1;
+            opacity: 0.6;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 40px 20px;
+            position: relative;
+            z-index: 5;
+        }
+
+        .card {
+            background: var(--card-bg);
+            border: 2px solid var(--dark-gold);
+            border-radius: 20px;
+            padding: 40px;
+            backdrop-filter: blur(15px);
+        }
+
+        .btn-image {
+            display: inline-block;
+            border: none;
+            background-size: contain;
+            background-repeat: no-repeat;
+            background-position: center;
+            cursor: pointer;
+            background-color: transparent;
+            width: 250px;
+            height: 120px;
+            transition: 0.4s;
+        }
+
+        .btn-image:hover {
+            transform: scale(1.08);
+            filter: drop-shadow(0 0 15px rgba(246, 216, 107, 0.4));
+        }
+
+        .animate-enter {
+            animation: slideInLeft 1s forwards;
+        }
+
+        @keyframes slideInLeft {
+            from {
+                transform: translateX(-50px);
+                opacity: 0;
+            }
+
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="vignette"></div>
+    <div class="bg-layer"
+        style="background-image: url('{% block bg_url %}/static/images/bg_selection.png{% endblock %}')"></div>
+
+    {% block content %}{% endblock %}
+
+    <script>
+        function transitionTo(url, element) {
+            element.classList.add('animate-exit');
+            setTimeout(() => { window.location.href = url; }, 500);
+        }
+    </script>
+</body>
+
+</html>

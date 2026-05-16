@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% block title %}Markov | Symphony of Words{% endblock %}
+{% block bg_url %}/static/images/bg_models.png{% endblock %}
+
+{% block content %}
+<div class="container animate-enter">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 40px;">
+        <h1>Markov Engine</h1>
+        <button class="word-tag" onclick="window.location.href='/'">Back to Portals</button>
+    </div>
+
+    <div class="card">
+        <h3 style="margin-top: 0; color: var(--warm-gold);">Thematic Palette</h3>
+        <p style="font-size: 0.9em; color: var(--text-dim); margin-bottom: 20px;">Infuse magical seeds:</p>
+
+        <div style="display: flex; flex-wrap: wrap; justify-content: center; margin-bottom: 30px;">
+            {% for word in popular_words %}
+            <span class="word-tag" onclick="appendWord('{{ word }}')">{{ word }}</span>
+            {% endfor %}
+        </div>
+
+        <form method="post">
+            <div style="position: relative; width: 100%;">
+                <input type="text" id="seed-input" name="seed" placeholder="Magical seeds..."
+                    value="{{ selected_seed if selected_seed else '' }}">
+            </div>
+
+            <div style="display: flex; justify-content: center; gap: 30px; margin-top: 20px;">
+                <button type="submit" name="action" value="stanza" class="btn-image"
+                    style="width: 250px; height: 120px; background-image: url('/static/images/GENERATE COUPLET.png');"></button>
+                <button type="submit" name="action" value="lyrics" class="btn-image"
+                    style="width: 250px; height: 120px; background-image: url('/static/images/FULL POEM COMPOSITION.png');"></button>
+            </div>
+        </form>
+    </div>
+</div>
+<script>
+    function appendWord(word) {
+        const input = document.getElementById('seed-input');
+        input.value = input.value.trim() ? input.value + ' ' + word : word;
+    }
+</script>
+{% endblock %}

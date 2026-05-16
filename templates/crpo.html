@@ -27,14 +27,18 @@
 
         <form method="post" id="gen-form">
             <div class="settings-grid" style="margin-bottom: 25px;">
-                <div class="setting">
-                    <label style="color: var(--primary-color); font-weight: 600;">Poetic Architecture:</label>
-                    <select name="poetic_form"
-                        style="width: 100%; padding: 12px; border-radius: 15px; background: rgba(0,0,0,0.5); color: white; border: 1px solid var(--glass-border); cursor: pointer;">
-                        <option value="quatrain">Quatrain (4 Lines)</option>
-                        <option value="haiku">Haiku</option>
-                        <option value="sonnet">Sonnet</option>
-                    </select>
+                <div class="setting" style="margin-bottom: 20px;">
+                    <label style="color: var(--primary-color); font-weight: 600; display: block; margin-bottom: 10px;">
+                        Poetic Line Count: <span id="line-count-display" style="color: var(--highlight-gold);">4</span>
+                    </label>
+                    <input type="range" name="line_count" id="line-slider" min="2" max="16" value="4" step="1"
+                        style="width: 100%; cursor: pointer; accent-color: var(--highlight-gold);"
+                        oninput="document.getElementById('line-count-display').innerText = this.value">
+                    <div
+                        style="display: flex; justify-content: space-between; color: rgba(255,255,255,0.5); font-size: 0.8rem; margin-top: 5px;">
+                        <span>2 Lines</span>
+                        <span>16 Lines</span>
+                    </div>
                 </div>
             </div>
 

@@ -1,0 +1,15 @@
+# Web Sunucusu
+flask
+
+# Yapay Zeka ve Hesaplama
+tensorflow>=2.11.0
+numpy<2.0.0
+keras
+
+# Doğal Dil İşleme (NLP) ve Veri Seti
+datasets
+pronouncing
+regex
+
+# Yardımcı Araçlar
+huggingface-hub

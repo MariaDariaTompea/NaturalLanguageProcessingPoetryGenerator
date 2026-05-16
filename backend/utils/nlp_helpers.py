@@ -1,39 +1,37 @@
 import re
+import os
 import numpy as np
 from datasets import load_dataset
 
 def get_crpo_clean_corpus(limit=50000):
+    # Data klasörünün varlığından emin olalım
+    if not os.path.exists('data'):
+        os.makedirs('data')
+
     dataset = load_dataset("biglam/gutenberg-poetry-corpus", split="train")
     
-    # 1. Ham satırları al
+    # 1. Ham veriyi al (Raw Data)
     raw_lines = [line['line'] for line in dataset.select(range(limit))]
-    
-    # 2. Satırları birleştirirken her satırın sonuna gerçek bir yeni satır karakteri koy
-    # Bu, modelin dizenin nerede bittiğini öğrenmesi için hayatidir.
     full_text = "\n".join(raw_lines)
+
+    # HAM VERİYİ KAYDET (Olduğu gibi)
+    with open("data/raw_corpus_debug.txt", "w", encoding="utf-8") as f:
+        f.write(full_text)
     
-    # 3. ISO-8859-1 temizliği (Senin mevcut kodun)
+    # 2. Temizlik İşlemleri (Process Data)
+    # ISO-8859-1 dışı karakterleri at
     clean_text = re.sub(r'[^\x00-\x7f]', r'', full_text)
-    
-    # 4. KRİTİK: Gereksiz boşlukları temizle ama tek boşluğu ve yeni satırı koru
-    # Modelin 'kelime' kavramını anlaması için boşluklar çok önemli.
-    clean_text = re.sub(r'[ \t]+', ' ', clean_text) # Sekmeleri boşluğa çevir
-    
-    # 5. Küçük harfe çevir (Makale, karakter kümesini daraltmak için bunu önerir)
+    # Gereksiz boşlukları/tabları temizle
+    clean_text = re.sub(r'[ \t]+', ' ', clean_text)
+    # Çoklu satır boşluklarını teke indir
+    clean_text = re.sub(r'\n+', '\n', clean_text)
+    # Küçük harfe çevir
     clean_text = clean_text.lower()
     
-    return clean_text
+    # İŞLENMİŞ (PROCESSED) VERİYİ KAYDET
+    with open("data/processed_corpus_debug.txt", "w", encoding="utf-8") as f:
+        f.write(clean_text)
 
-def prepare_data(text, seq_length=40):
-    chars = sorted(list(set(text)))
-    char_to_int = {c: i for i, c in enumerate(chars)}
+    print(f"--- Debug: Veriler data/ klasörüne kaydedildi. (Limit: {limit} satır) ---")
     
-    X, y = [], []
-    for i in range(0, len(text) - seq_length):
-        sequence = text[i:i + seq_length]
-        label = text[i + seq_length]
-        X.append([char_to_int[char] for char in sequence])
-        # Softmax tahmini için hedef karakterin indeksini al [cite: 144]
-        y.append(char_to_int[label])
-        
-    return np.array(X), np.array(y), char_to_int, chars
+    return clean_text

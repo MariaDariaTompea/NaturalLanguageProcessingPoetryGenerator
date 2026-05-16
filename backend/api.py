@@ -1,11 +1,14 @@
 import os
+import re
+import random
 import numpy as np
 import tensorflow as tf
+import pronouncing  # pip install pronouncing
 from .models.crpo_model import CRPOModel
-from .utils.nlp_helpers import get_crpo_clean_corpus, prepare_data
+from .utils.nlp_helpers import get_crpo_clean_corpus
 
 class PoetryAPI:
-    def __init__(self, weights_path='crpo_weights.weights.h5', limit=50000):
+    def __init__(self, weights_path='crpo_weights.weights.h5', limit=20000):
         corpus = get_crpo_clean_corpus(limit=limit) 
         chars = sorted(list(set(corpus)))
         self.char_to_int = {c: i for i, c in enumerate(chars)}
@@ -23,43 +26,123 @@ class PoetryAPI:
         preds = exp_preds / np.sum(exp_preds)
         return np.argmax(np.random.multinomial(1, preds, 1))
 
-    def generate_crpo_poem(self, poetic_form, seed_word=""):
-        """seed_word parametresi eklenerek TypeError hatası giderildi."""
-        forms = {'quatrain': (4, 48), 'haiku': (3, 20), 'sonnet': (14, 48)}
-        num_lines, target_len = forms.get(poetic_form, (4, 48))
+    def _clean_line(self, line):
+        if not line: return None
         
-        # Seçilen kelimeyi bağlama (context) yediriyoruz
-        base_text = f"the beauty of {seed_word.lower()} " if seed_word else "the silent world "
-        context = base_text.rjust(40)[-40:]
+        # 1. Yan yana gelen noktalamaları temizle (,,. -> .)
+        line = re.sub(r'[.,!?;:]{2,}', '.', line)
+        
+        # 2. Gereksiz boşlukları al ve kenarları temizle
+        line = line.strip().strip(',').strip()
+        
+        words = line.split()
+        if len(words) < 3: return None # Çok kısa/anlamsız satırları reddet
+
+        # 3. Anlamsız/Yarım kelime kontrolü (gr, th gibi 1-2 harflik saçma bitişleri temizle)
+        # İstisna: İngilizcedeki anlamlı kısa kelimeler
+        allowed_shorts = ['me', 'be', 'is', 'he', 'we', 'to', 'in', 'it', 'my', 'so', 'as']
+        if len(words[-1]) < 3 and words[-1].lower() not in allowed_shorts:
+            words.pop()
+            line = " ".join(words)
+
+        # 4. Satır sonu bağlaç kontrolü
+        invalid_ends = ['the', 'and', 'a', 'of', 'with', 'to', 'in', 'is', 'at', 'by', 'for']
+        if words and words[-1].lower() in invalid_ends:
+            return None 
+
+        return line if len(line) > 10 else None
+
+    def generate_crpo_poem(self, line_count, seed_word=""):
+        # Dinamik Kafiye Şeması Oluşturma (A, B, A, B... şeklinde döngü)
+        # Örn: line_count=6 ise scheme=['A', 'B', 'A', 'B', 'A', 'B'] olur
+        scheme = []
+        for i in range(line_count):
+            scheme.append('A' if i % 2 == 0 else 'B')
+        
+        # Satır uzunluğunu slider modunda standart (45) tutuyoruz
+        target_len = 45 
         
         poem = []
-        for _ in range(num_lines):
-            line = self._generate_line(context, target_len)
-            poem.append(line)
-            context = (context + line + "\n")[-40:]
+        rhyme_storage = {} 
+        line_idx = 0
+
+        # Güvenlik önlemi: Sonsuz döngüye girmemesi için deneme sınırı
+        max_attempts = line_count * 5 
+        attempts = 0
+
+        while len(poem) < line_count and attempts < max_attempts:
+            attempts += 1
+            current_scheme = scheme[line_idx]
+            target_rhyme_word = rhyme_storage.get(current_scheme)
+            
+            # Satır üretimi
+            line = self._generate_line(target_len, rhyme_with=target_rhyme_word)
+            
+            # SEED WORD: Sadece ilk satıra rastgele yerleştir
+            if line_idx == 0 and seed_word:
+                words = line.split()
+                if seed_word.lower() not in line.lower():
+                    insert_pos = random.randint(0, len(words))
+                    words.insert(insert_pos, seed_word)
+                    line = " ".join(words)
+
+            cleaned = self._clean_line(line)
+            if cleaned:
+                # Kafiye için son kelimeyi kaydet
+                last_word = cleaned.split()[-1].strip(".,!?;").lower()
+                if current_scheme not in rhyme_storage:
+                    rhyme_storage[current_scheme] = last_word
+                
+                poem.append(cleaned.capitalize())
+                line_idx += 1
+                
         return poem
 
-    def _generate_line(self, context, target_len):
+    def _generate_line(self, target_len, rhyme_with=None):
+        # Her satır için temiz bir context başlatarak modelin takılmasını önlüyoruz
+        context = "the silent world of nature and spirits ".rjust(40)[-40:]
         line = ""
-        current_context = context
-        for _ in range(int(target_len * 0.85)):
-            char = self._predict(current_context, forbidden=['\n'])
+        
+        # 1. Normal Üretim (Hedef uzunluğun %70'ine kadar)
+        for _ in range(int(target_len * 0.7)):
+            char = self._predict(context, forbidden=['\n', '\r'])
             line += char
-            current_context = (current_context + char)[-40:]
-        for _ in range(15):
-            char = self._predict(current_context)
+            context = (context + char)[-40:]
+
+        # 2. Kafiye Enjeksiyonu
+        if rhyme_with:
+            rhymes = pronouncing.rhymes(rhyme_with)
+            # Anlamsız (gr. gibi) kısa harfleri filtrele, sadece gerçek kelimeleri al
+            valid_rhymes = [r for r in rhymes if len(r) > 2 and r.isalpha()]
+            
+            if valid_rhymes:
+                rhyme_word = random.choice(valid_rhymes[:15]) # En iyi 15 seçenekten biri
+                # Yarım kalan son kelimeyi temizle ve kafiyeli kelimeyi bağla
+                if ' ' in line:
+                    line = line.rsplit(' ', 1)[0]
+                return line + " " + rhyme_word + "."
+
+        # 3. Kafiye yoksa veya bulunamadıysa cümleyi doğal bitir
+        for _ in range(25):
+            char = self._predict(context)
             line += char
-            if char in [' ', '.', '!', '?', '\n']: break
-            current_context = (current_context + char)[-40:]
-        return line.strip().capitalize()
+            if char in [' ', '.', '!', '?']: break
+            context = (context + char)[-40:]
+            
+        return line
 
     def _predict(self, context, forbidden=None):
         x = np.zeros((1, 40))
         for t, char in enumerate(context[-40:]):
             x[0, t] = self.char_to_int.get(char, 0)
+        
         preds = self.crpo_model.predict(x, verbose=0)[0]
+        
         if forbidden:
             for f_char in forbidden:
-                if f_char in self.char_to_int: preds[self.char_to_int[f_char]] = 0
-            if np.sum(preds) > 0: preds = preds / np.sum(preds)
+                if f_char in self.char_to_int:
+                    preds[self.char_to_int[f_char]] = 0
+            if np.sum(preds) > 0:
+                preds = preds / np.sum(preds)
+        
         return self.int_to_char[self.sample_with_temperature(preds)]

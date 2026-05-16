@@ -8,6 +8,24 @@ api = PoetryAPI(limit=20000)
 def index():
     return render_template('selection.html')
 
+@app.route('/markov', methods=['GET', 'POST'])
+def markov_page():
+    result = None
+    selected_seed = ""
+    if request.method == 'POST':
+        action = request.form.get('action')
+        selected_seed = request.form.get('seed', '')
+        
+        # Makaleye göre dize sayısı (couplet için 2, full poem için 4-8)
+        line_count = 2 if action == 'stanza' else 4
+        
+        # API'deki yeni markov fonksiyonunu çağırıyoruz
+        lines = api.generate_markov_poem(line_count=line_count, seed_word=selected_seed)
+        result = {f"Markov {line_count}-Line Composition": lines}
+    
+    popular_words = ["Music", "Nature", "Today", "Paradise", "Love"] # Makaledeki örnek temalar
+    return render_template('markov.html', result=result, popular_words=popular_words, selected_seed=selected_seed)
+
 @app.route('/crpo', methods=['GET', 'POST'])
 def crpo_page():
     result = None

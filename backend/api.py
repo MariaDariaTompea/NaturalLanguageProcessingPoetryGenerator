@@ -6,11 +6,19 @@ import tensorflow as tf
 import pronouncing  # pip install pronouncing
 from .models.crpo_model import CRPOModel
 from .utils.nlp_helpers import get_crpo_clean_corpus
+from .models.markov_model import MarkovPoetryModel
 
 class PoetryAPI:
     def __init__(self, weights_path='crpo_weights.weights.h5', limit=20000):
-        corpus = get_crpo_clean_corpus(limit=limit) 
-        chars = sorted(list(set(corpus)))
+        # 1. Önce korpusu al ve self.corpus olarak ata
+        self.corpus = get_crpo_clean_corpus(limit=limit) 
+        
+        # 2. Şimdi Markov motorunu kur ve eğit
+        self.markov_engine = MarkovPoetryModel(order=2) 
+        self.markov_engine.train(self.corpus) 
+        
+        # 3. Mevcut CRPO kurulum işlemlerine devam et
+        chars = sorted(list(set(self.corpus)))
         self.char_to_int = {c: i for i, c in enumerate(chars)}
         self.int_to_char = {i: c for i, c in enumerate(chars)}
         self.vocab_size = len(chars)
@@ -130,6 +138,32 @@ class PoetryAPI:
             context = (context + char)[-40:]
             
         return line
+
+    def generate_markov_poem(self, line_count, seed_word=""):
+        poem = []
+        rhyme_storage = {}
+        # AABA Şeması 
+        scheme = ['A', 'A', 'B', 'A'] if line_count == 4 else ['A', 'B']
+        
+        for i in range(line_count):
+            current_scheme = scheme[i % len(scheme)]
+            target_rhyme = rhyme_storage.get(current_scheme)
+            
+            # Makaledeki anlamsal kısıt (Semantic Constraint) mantığı 
+            # Seed word sadece dize içinde değil, mantıklı bir yere enjekte edilir
+            line = self.markov_engine.generate_line(
+                rhyme_with=target_rhyme, 
+                seed=seed_word if i == 0 else None # İlk dizeye seed word'ü zorla ekle
+            )
+            
+            cleaned = self._clean_line(line)
+            if cleaned:
+                if current_scheme not in rhyme_storage:
+                    last_word = cleaned.split()[-1].strip(".,!?;").lower()
+                    rhyme_storage[current_scheme] = last_word
+                
+                poem.append(cleaned.capitalize())
+        return poem
 
     def _predict(self, context, forbidden=None):
         x = np.zeros((1, 40))

@@ -1,43 +1,112 @@
 {% extends "base.html" %}
-{% block title %}Markov | Symphony of Words{% endblock %}
+{% block title %}Markov Engine | Symphony of Words{% endblock %}
 {% block bg_url %}/static/images/bg_models.png{% endblock %}
 
 {% block content %}
 <div class="container animate-enter">
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 40px;">
-        <h1>Markov Engine</h1>
-        <button class="word-tag" onclick="window.location.href='/'">Back to Portals</button>
+        <h1
+            style="color: var(--bright-gold); margin: 0; font-size: 2.5em; text-shadow: 0 0 20px rgba(246, 216, 107, 0.3);">
+            Markov Engine</h1>
+        <button class="word-tag" onclick="window.location.href='/'"
+            style="cursor: pointer; background: rgba(111, 44, 145, 0.3); border: 1px solid var(--magical-lavender);">
+            ← Back to Portals
+        </button>
     </div>
 
     <div class="card">
-        <h3 style="margin-top: 0; color: var(--warm-gold);">Thematic Palette</h3>
-        <p style="font-size: 0.9em; color: var(--text-dim); margin-bottom: 20px;">Infuse magical seeds:</p>
+        <h3 style="margin-top: 0; color: var(--warm-gold); letter-spacing: 2px;">THEMATIC PALETTE</h3>
+        <p style="font-size: 0.9em; color: var(--magical-lavender); margin-bottom: 20px; opacity: 0.8;">
+            Select magical seeds to guide the Markov chain:
+        </p>
 
-        <div style="display: flex; flex-wrap: wrap; justify-content: center; margin-bottom: 30px;">
+        <div style="display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; margin-bottom: 30px;">
             {% for word in popular_words %}
-            <span class="word-tag" onclick="appendWord('{{ word }}')">{{ word }}</span>
+            <span class="word-tag" onclick="appendWord('{{ word }}')" style="cursor: pointer; transition: 0.3s;">
+                {{ word }}
+            </span>
             {% endfor %}
         </div>
 
         <form method="post">
-            <div style="position: relative; width: 100%;">
-                <input type="text" id="seed-input" name="seed" placeholder="Magical seeds..."
-                    value="{{ selected_seed if selected_seed else '' }}">
+            <div style="position: relative; width: 100%; margin-bottom: 30px;">
+                <input type="text" id="seed-input" name="seed" placeholder="Enter keywords for your composition..."
+                    value="{{ selected_seed if selected_seed else '' }}" style="width: 100%; background: rgba(13, 8, 20, 0.6); border: 1px solid var(--dark-gold); 
+                              padding: 15px; border-radius: 10px; color: white; font-family: 'Outfit', sans-serif;
+                              box-sizing: border-box; outline: none;">
             </div>
 
-            <div style="display: flex; justify-content: center; gap: 30px; margin-top: 20px;">
-                <button type="submit" name="action" value="stanza" class="btn-image"
-                    style="width: 250px; height: 120px; background-image: url('/static/images/GENERATE COUPLET.png');"></button>
-                <button type="submit" name="action" value="lyrics" class="btn-image"
-                    style="width: 250px; height: 120px; background-image: url('/static/images/FULL POEM COMPOSITION.png');"></button>
+            <div style="display: flex; justify-content: center; gap: 40px; flex-wrap: wrap;">
+                <div style="text-align: center;">
+                    <button type="submit" name="action" value="stanza" class="btn-image"
+                        style="background-image: url('/static/images/GENERATE COUPLET.png'); border: none;"></button>
+                    <p style="font-size: 0.8em; color: var(--warm-gold); margin-top: 10px;">Stanza (2 Lines)</p>
+                </div>
+
+                <div style="text-align: center;">
+                    <button type="submit" name="action" value="lyrics" class="btn-image"
+                        style="background-image: url('/static/images/FULL POEM COMPOSITION.png'); border: none;"></button>
+                    <p style="font-size: 0.8em; color: var(--warm-gold); margin-top: 10px;">Full Composition</p>
+                </div>
             </div>
         </form>
     </div>
+
+    {% if result %}
+    <div class="card animate-enter"
+        style="margin-top: 40px; border-style: double; border-width: 4px; position: relative;">
+        <div style="position: absolute; top: 10px; left: 10px; color: var(--dark-gold); opacity: 0.5;">✦</div>
+        <div style="position: absolute; top: 10px; right: 10px; color: var(--dark-gold); opacity: 0.5;">✦</div>
+
+        {% for title, lines in result.items() %}
+        <h2
+            style="color: var(--bright-gold); text-align: center; margin-bottom: 30px; font-weight: 300; letter-spacing: 3px;">
+            {{ title }}
+        </h2>
+        <div
+            style="text-align: center; font-style: italic; line-height: 2.2; font-size: 1.3em; color: #F3EFFF; text-shadow: 1px 1px 2px rgba(0,0,0,0.5);">
+            {% for line in lines %}
+            <span style="display: block; margin-bottom: 5px;">{{ line }}</span>
+            {% endfor %}
+        </div>
+        {% endfor %}
+
+        <div style="position: absolute; bottom: 10px; left: 10px; color: var(--dark-gold); opacity: 0.5;">✦</div>
+        <div style="position: absolute; bottom: 10px; right: 10px; color: var(--dark-gold); opacity: 0.5;">✦</div>
+    </div>
+    {% endif %}
 </div>
+
+<style>
+    /* Markov Sayfasına Özel Ek Stiller */
+    .word-tag {
+        background: rgba(75, 31, 99, 0.4);
+        border: 1px solid var(--vibrant-purple);
+        color: var(--magical-lavender);
+        padding: 8px 15px;
+        border-radius: 20px;
+        font-size: 0.9em;
+        display: inline-block;
+    }
+
+    .word-tag:hover {
+        background: var(--vibrant-purple);
+        color: white;
+        box-shadow: 0 0 10px var(--soft-glow-purple);
+    }
+
+    #seed-input:focus {
+        border-color: var(--bright-gold) !important;
+        box-shadow: 0 0 15px rgba(246, 216, 107, 0.2);
+    }
+</style>
+
 <script>
     function appendWord(word) {
         const input = document.getElementById('seed-input');
-        input.value = input.value.trim() ? input.value + ' ' + word : word;
+        const currentValue = input.value.trim();
+        input.value = currentValue ? currentValue + ' ' + word : word;
+        input.focus();
     }
 </script>
 {% endblock %}

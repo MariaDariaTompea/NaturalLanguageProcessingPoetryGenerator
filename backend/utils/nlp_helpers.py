@@ -2,6 +2,39 @@ import re
 import os
 import numpy as np
 from datasets import load_dataset
+import re
+import nltk
+from nltk.corpus import cmudict
+
+# Gerekli kaynakları indir
+nltk.download('cmudict')
+d = cmudict.dict()
+
+def get_meter_profile(word):
+    """
+    Makaledeki 'Rhythmic Tags' mantığı: 'today' -> '01'[cite: 137].
+    Kelimelerin vurgu yapısını döndürür.
+    """
+    word = word.lower()
+    if word in d:
+        # İlk telaffuz varyasyonunu al ve sadece rakamları (stres) çek
+        return "".join([char for char in d[word][0] if char.isdigit()])
+    return "0" * (len(word) // 3) # Bilinmeyen kelimeler için basit tahmin
+
+def check_rhyme_manual(word1, word2):
+    """
+    Makaledeki 'Rhyme Constraints' mantığı: Son stressed sesliden sonrası aynı olmalı[cite: 132].
+    """
+    def get_rhyme_part(word):
+        if word in d:
+            # Fonetik dizideki son stressed sesliyi bul
+            phonemes = d[word][0]
+            for i in range(len(phonemes)-1, -1, -1):
+                if any(char.isdigit() and char != '0' for char in phonemes[i]):
+                    return phonemes[i:]
+        return word[-2:] # Kelime sözlükte yoksa son 2 harfe bak
+
+    return get_rhyme_part(word1.lower()) == get_rhyme_part(word2.lower())
 
 def get_crpo_clean_corpus(limit=50000):
     # Data klasörünün varlığından emin olalım

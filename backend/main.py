@@ -30,16 +30,24 @@ def markov_page():
 def crpo_page():
     result = None
     selected_seed = ""
+    line_count = 4  # <-- Varsayılan değeri buraya ekledik (Hatanın çözümü bu)
+    
     if request.method == 'POST':
-        # Select yerine slider'dan gelen line_count'u alıyoruz
+        # Formdan gelen değeri al, gelmezse varsayılan 4 olsun
         line_count = int(request.form.get('line_count', 4))
         selected_seed = request.form.get('seed_word', '')
         
-        # API fonksiyonunu yeni parametreyle çağırıyoruz
         lines = api.generate_crpo_poem(line_count=line_count, seed_word=selected_seed)
         result = {f"Custom {line_count}-Line Poem": lines}
     
     popular_words = ["Nature", "Spirit", "Dreams", "Silence", "Shadows", "Eternal"]
-    return render_template('crpo.html', result=result, popular_words=popular_words, selected_seed=selected_seed)
+    
+    return render_template('crpo.html', 
+                           result=result, 
+                           popular_words=popular_words, 
+                           selected_seed=selected_seed, 
+                           line_count=line_count) # Artık her zaman bir değere sahip
+
+
 if __name__ == '__main__':
     app.run(debug=True, port=3002)

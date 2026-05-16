@@ -1,146 +1,165 @@
 {% extends "base.html" %}
-{% block title %}CRPO | Symphony of Words{% endblock %}
+{% block title %}CRPO Engine | Symphony of Words{% endblock %}
 {% block bg_url %}/static/images/bg_models.png{% endblock %}
 
 {% block content %}
 <div class="container animate-enter">
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 40px;">
-        <h1>CRPO Engine</h1>
-        <button class="nav-btn" onclick="window.location.href='/'">Back to Portals</button>
+        <h1
+            style="color: var(--bright-gold); margin: 0; font-size: 2.5em; text-shadow: 0 0 20px rgba(246, 216, 107, 0.3);">
+            CRPO Engine</h1>
+        <button class="word-tag" onclick="window.location.href='/'"
+            style="cursor: pointer; background: rgba(111, 44, 145, 0.3); border: 1px solid var(--magical-lavender);">
+            ← Back to Portals
+        </button>
     </div>
 
-    <div class="card glass-card"
-        style="border: 2px solid var(--highlight-gold); border-radius: 30px; box-shadow: 0 0 20px rgba(255, 207, 64, 0.2);">
-        <h3 style="margin-top: 0; color: var(--highlight-gold);">Semantic Palette</h3>
-        <p class="hint">Select a single keyword to guide the generation:</p>
+    <div class="card">
+        <h3 style="margin-top: 0; color: var(--warm-gold); letter-spacing: 2px;">SEMANTIC PALETTE</h3>
+        <p style="font-size: 0.9em; color: var(--magical-lavender); margin-bottom: 20px; opacity: 0.8;">
+            Select a single magical seed to guide the deep neural generation:
+        </p>
 
-        <div class="word-chips"
-            style="justify-content: center; margin-bottom: 30px; display: flex; flex-wrap: wrap; gap: 12px;">
+        <div style="display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; margin-bottom: 30px;">
             {% for word in popular_words %}
-            <div class="chip {% if word == selected_seed %}active{% endif %}"
-                style="border: 1px solid rgba(255, 255, 255, 0.2); transition: all 0.3s ease;"
-                onclick="selectSingleSeed('{{ word }}', this)">
+            <span class="word-tag chip {% if word == selected_seed %}active{% endif %}"
+                onclick="selectSingleSeed('{{ word }}', this)" style="cursor: pointer; transition: 0.3s;">
                 {{ word }}
-            </div>
+            </span>
             {% endfor %}
         </div>
 
         <form method="post" id="gen-form">
-            <div class="settings-grid" style="margin-bottom: 25px;">
-                <div class="setting" style="margin-bottom: 20px;">
-                    <label style="color: var(--primary-color); font-weight: 600; display: block; margin-bottom: 10px;">
-                        Poetic Line Count: <span id="line-count-display" style="color: var(--highlight-gold);">4</span>
-                    </label>
-                    <input type="range" name="line_count" id="line-slider" min="2" max="16" value="4" step="1"
-                        style="width: 100%; cursor: pointer; accent-color: var(--highlight-gold);"
-                        oninput="document.getElementById('line-count-display').innerText = this.value">
-                    <div
-                        style="display: flex; justify-content: space-between; color: rgba(255,255,255,0.5); font-size: 0.8rem; margin-top: 5px;">
-                        <span>2 Lines</span>
-                        <span>16 Lines</span>
-                    </div>
+            <div style="margin-bottom: 30px; padding: 0 20px;">
+                <label for="line_count"
+                    style="color: var(--warm-gold); font-size: 0.9em; margin-bottom: 10px; display: block;">
+                    Poetic Line Count: <span id="lineValue" style="color: var(--bright-gold); font-weight: bold;">{{
+                        line_count|default(6) }}</span>
+                </label>
+                <input type="range" class="form-range custom-slider" name="line_count" id="line_count" min="2" max="16"
+                    step="1" value="{{ line_count|default(6) }}"
+                    oninput="document.getElementById('lineValue').innerText = this.value">
+                <div
+                    style="display: flex; justify-content: space-between; color: var(--magical-lavender); font-size: 0.7rem; margin-top: 5px; opacity: 0.6;">
+                    <span>2 Lines</span>
+                    <span>16 Lines</span>
                 </div>
             </div>
 
-            <div style="position: relative; width: 100%; margin-bottom: 25px;">
+            <div style="position: relative; width: 100%; margin-bottom: 30px;">
                 <input type="text" id="seed-input" name="seed_word" readonly
-                    placeholder="Click a button above to select..."
-                    style="width: 100%; padding: 15px; border-radius: 15px; background: rgba(0,0,0,0.3); color: var(--highlight-gold); border: 1px solid var(--highlight-gold); font-weight: bold; text-align: center;"
-                    value="{{ selected_seed if selected_seed else '' }}">
+                    placeholder="Select a seed from the palette above..."
+                    value="{{ selected_seed if selected_seed else '' }}" style="width: 100%; background: rgba(13, 8, 20, 0.6); border: 1px solid var(--dark-gold); 
+                           padding: 15px; border-radius: 10px; color: var(--bright-gold); font-family: 'Outfit', sans-serif;
+                           box-sizing: border-box; outline: none; text-align: center; font-weight: bold;">
                 <span onclick="clearSelection()"
-                    style="position: absolute; right: 15px; top: 15px; cursor: pointer; color: var(--highlight-red); font-weight: bold; font-size: 1.2em;">✕</span>
+                    style="position: absolute; right: 15px; top: 12px; cursor: pointer; color: #ff4d4d; font-weight: bold; font-size: 1.2em;">✕</span>
             </div>
 
             <div style="text-align: center;">
                 <button type="submit" class="btn-image"
-                    style="width: 250px; height: 120px; background-image: url('/static/images/GENERATE COUPLET.png'); cursor: pointer;"></button>
+                    style="background-image: url('/static/images/GENERATE COUPLET.png'); border: none; width: 250px; height: 120px;"></button>
             </div>
         </form>
     </div>
 
     {% if result %}
-    <div class="output-section animate-enter" style="margin-top: 40px; 
-                    background: rgba(20, 11, 31, 0.9); /* Daha koyu ve az şeffaf bir mor/siyah */
-                    backdrop-filter: blur(20px); /* Arkayı daha çok bulandırır */
-                    border: 2px solid var(--highlight-gold); 
-                    border-radius: 30px; 
-                    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5), 0 0 20px rgba(255, 207, 64, 0.1); 
-                    padding: 3rem;
-                    display: block;">
-    
-        {% for section, lines in result.items() %}
+    <div class="card animate-enter"
+        style="margin-top: 40px; border-style: double; border-width: 4px; position: relative; background: rgba(20, 11, 31, 0.95);">
+        <div style="position: absolute; top: 10px; left: 10px; color: var(--dark-gold); opacity: 0.5;">✦</div>
+        <div style="position: absolute; top: 10px; right: 10px; color: var(--dark-gold); opacity: 0.5;">✦</div>
+
+        {% for title, lines in result.items() %}
         <h2
-            style="color: var(--highlight-gold); text-transform: uppercase; letter-spacing: 3px; font-size: 1.5rem; margin-bottom: 25px; text-shadow: 0 0 10px rgba(255, 207, 64, 0.4); text-align: center;">
-            {{ section }}
+            style="color: var(--bright-gold); text-align: center; margin-bottom: 30px; font-weight: 300; letter-spacing: 3px; text-transform: uppercase;">
+            {{ title }}
         </h2>
-    
-        <div class="poem-area"
-            style="background: transparent; min-height: auto; padding: 0; margin-bottom: 30px; text-align: center;">
+        <div
+            style="text-align: center; font-style: italic; line-height: 2.2; font-size: 1.4em; color: #F3EFFF; text-shadow: 1px 1px 4px rgba(0,0,0,0.7); font-family: 'Playfair Display', serif;">
             {% for line in lines %}
-            <p
-                style="margin-bottom: 12px; font-size: 1.5rem; color: #F3EFFF; line-height: 1.8; font-family: 'Playfair Display', serif; font-style: italic;">
-                {{ line }}
-            </p>
+            <span style="display: block; margin-bottom: 10px;">{{ line }}</span>
             {% endfor %}
         </div>
-    
-        {% if not loop.last %}
-        <div
-            style="height: 1px; background: linear-gradient(to right, transparent, var(--highlight-gold), transparent); margin: 40px auto; width: 60%; opacity: 0.3;">
-        </div>
-        {% endif %}
         {% endfor %}
+
+        <div style="position: absolute; bottom: 10px; left: 10px; color: var(--dark-gold); opacity: 0.5;">✦</div>
+        <div style="position: absolute; bottom: 10px; right: 10px; color: var(--dark-gold); opacity: 0.5;">✦</div>
     </div>
     {% endif %}
 </div>
+
+<style>
+    /* Markov ve CRPO Ortak Estetiği */
+    .word-tag {
+        background: rgba(75, 31, 99, 0.4);
+        border: 1px solid var(--vibrant-purple);
+        color: var(--magical-lavender);
+        padding: 8px 18px;
+        border-radius: 20px;
+        font-size: 0.9em;
+        display: inline-block;
+    }
+
+    .word-tag:hover {
+        background: rgba(157, 78, 221, 0.4);
+        color: white;
+        transform: translateY(-2px);
+        box-shadow: 0 0 15px rgba(157, 78, 221, 0.3);
+    }
+
+    .word-tag.active {
+        background: var(--vibrant-purple) !important;
+        color: white !important;
+        border-color: var(--bright-gold) !important;
+        box-shadow: 0 0 15px rgba(246, 216, 107, 0.4);
+    }
+
+    #seed-input:focus {
+        border-color: var(--bright-gold) !important;
+        box-shadow: 0 0 15px rgba(246, 216, 107, 0.2);
+    }
+
+    /* Slider Özelleştirme */
+    .custom-slider {
+        -webkit-appearance: none;
+        width: 100%;
+        height: 4px;
+        background: rgba(246, 216, 107, 0.2);
+        border-radius: 5px;
+        outline: none;
+    }
+
+    .custom-slider::-webkit-slider-thumb {
+        -webkit-appearance: none;
+        appearance: none;
+        width: 18px;
+        height: 18px;
+        background: var(--bright-gold);
+        border-radius: 50%;
+        cursor: pointer;
+        box-shadow: 0 0 10px rgba(246, 216, 107, 0.5);
+    }
+</style>
 
 <script>
     function selectSingleSeed(word, element) {
         const input = document.getElementById('seed-input');
 
-        // 1. Önceki tüm aktif sınıfları temizle (Sadece bir seçim olması için)
-        document.querySelectorAll('.chip').forEach(c => {
+        // Önceki aktifleri temizle
+        document.querySelectorAll('.word-tag').forEach(c => {
             c.classList.remove('active');
-            c.style.borderColor = 'rgba(255, 255, 255, 0.2)';
-            c.style.boxShadow = 'none';
         });
 
-        // 2. Tıklananı aktif yap ve vurgula
+        // Tıklananı seç
         element.classList.add('active');
-        element.style.borderColor = 'var(--highlight-gold)';
-        element.style.boxShadow = '0 0 10px rgba(255, 207, 64, 0.4)';
-
-        // 3. Input değerini üst üste eklemek yerine direkt üzerine yaz
         input.value = word;
     }
 
     function clearSelection() {
         document.getElementById('seed-input').value = '';
-        document.querySelectorAll('.chip').forEach(c => {
+        document.querySelectorAll('.word-tag').forEach(c => {
             c.classList.remove('active');
-            c.style.borderColor = 'rgba(255, 255, 255, 0.2)';
-            c.style.boxShadow = 'none';
         });
     }
 </script>
-
-<style>
-    /* Buton olduğu belli olsun diye ek görsel efektler */
-    .chip {
-        cursor: pointer;
-        background: rgba(255, 255, 255, 0.05);
-        padding: 10px 20px;
-        border-radius: 20px;
-    }
-
-    .chip:hover {
-        background: rgba(102, 252, 241, 0.1);
-        transform: translateY(-2px);
-    }
-
-    .chip.active {
-        background: var(--primary-color) !important;
-        color: var(--bg-color) !important;
-    }
-</style>
 {% endblock %}

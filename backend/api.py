@@ -3,21 +3,17 @@ import re
 import random
 import numpy as np
 import tensorflow as tf
-import pronouncing  # pip install pronouncing
+import pronouncing
 from .models.crpo_model import CRPOModel
 from .utils.nlp_helpers import get_crpo_clean_corpus
 from .models.markov_model import MarkovPoetryModel
 
 class PoetryAPI:
     def __init__(self, weights_path='crpo_weights.weights.h5', limit=20000):
-        # 1. Önce korpusu al ve self.corpus olarak ata
         self.corpus = get_crpo_clean_corpus(limit=limit) 
-        
-        # 2. Şimdi Markov motorunu kur ve eğit
         self.markov_engine = MarkovPoetryModel(order=2) 
         self.markov_engine.train(self.corpus) 
         
-        # 3. Mevcut CRPO kurulum işlemlerine devam et
         chars = sorted(list(set(self.corpus)))
         self.char_to_int = {c: i for i, c in enumerate(chars)}
         self.int_to_char = {i: c for i, c in enumerate(chars)}
@@ -37,23 +33,27 @@ class PoetryAPI:
     def _clean_line(self, line):
         if not line: return None
         
-        # 1. Yan yana gelen noktalamaları temizle (,,. -> .)
+        # 1. Parantezleri ve tırnakları KÖKTEN sil
+        line = re.sub(r'[()\[\]{}\"\'`]', '', line)
+        
+        # 2. Noktalama işaretlerinden sonra boşluk yoksa boşluk ekle (Örn: pain.and -> pain. and)
+        line = re.sub(r'([.,!?;:])(?=[^\s])', r'\1 ', line)
+        
+        # 3. Yan yana gelen noktalamaları teke indir (Örn: ., -> .)
         line = re.sub(r'[.,!?;:]{2,}', '.', line)
         
-        # 2. Gereksiz boşlukları al ve kenarları temizle
-        line = line.strip().strip(',').strip()
+        # 4. Gereksiz boşlukları temizle
+        line = re.sub(r'\s+', ' ', line).strip()
         
+        line = line.strip(',').strip()
         words = line.split()
-        if len(words) < 3: return None # Çok kısa/anlamsız satırları reddet
+        if len(words) < 3: return None
 
-        # 3. Anlamsız/Yarım kelime kontrolü (gr, th gibi 1-2 harflik saçma bitişleri temizle)
-        # İstisna: İngilizcedeki anlamlı kısa kelimeler
         allowed_shorts = ['me', 'be', 'is', 'he', 'we', 'to', 'in', 'it', 'my', 'so', 'as']
         if len(words[-1]) < 3 and words[-1].lower() not in allowed_shorts:
             words.pop()
             line = " ".join(words)
 
-        # 4. Satır sonu bağlaç kontrolü
         invalid_ends = ['the', 'and', 'a', 'of', 'with', 'to', 'in', 'is', 'at', 'by', 'for']
         if words and words[-1].lower() in invalid_ends:
             return None 
@@ -61,20 +61,11 @@ class PoetryAPI:
         return line if len(line) > 10 else None
 
     def generate_crpo_poem(self, line_count, seed_word=""):
-        # Dinamik Kafiye Şeması Oluşturma (A, B, A, B... şeklinde döngü)
-        # Örn: line_count=6 ise scheme=['A', 'B', 'A', 'B', 'A', 'B'] olur
-        scheme = []
-        for i in range(line_count):
-            scheme.append('A' if i % 2 == 0 else 'B')
-        
-        # Satır uzunluğunu slider modunda standart (45) tutuyoruz
+        scheme = ['A' if i % 2 == 0 else 'B' for i in range(line_count)]
         target_len = 45 
-        
         poem = []
         rhyme_storage = {} 
         line_idx = 0
-
-        # Güvenlik önlemi: Sonsuz döngüye girmemesi için deneme sınırı
         max_attempts = line_count * 5 
         attempts = 0
 
@@ -82,11 +73,8 @@ class PoetryAPI:
             attempts += 1
             current_scheme = scheme[line_idx]
             target_rhyme_word = rhyme_storage.get(current_scheme)
-            
-            # Satır üretimi
             line = self._generate_line(target_len, rhyme_with=target_rhyme_word)
             
-            # SEED WORD: Sadece ilk satıra rastgele yerleştir
             if line_idx == 0 and seed_word:
                 words = line.split()
                 if seed_word.lower() not in line.lower():
@@ -96,76 +84,65 @@ class PoetryAPI:
 
             cleaned = self._clean_line(line)
             if cleaned:
-                # Kafiye için son kelimeyi kaydet
                 last_word = cleaned.split()[-1].strip(".,!?;").lower()
                 if current_scheme not in rhyme_storage:
                     rhyme_storage[current_scheme] = last_word
-                
                 poem.append(cleaned.capitalize())
                 line_idx += 1
-                
         return poem
 
     def _generate_line(self, target_len, rhyme_with=None):
-        # Her satır için temiz bir context başlatarak modelin takılmasını önlüyoruz
         context = "the silent world of nature and spirits ".rjust(40)[-40:]
         line = ""
-        
-        # 1. Normal Üretim (Hedef uzunluğun %70'ine kadar)
         for _ in range(int(target_len * 0.7)):
-            char = self._predict(context, forbidden=['\n', '\r'])
+            char = self._predict(context, forbidden=['\n', '\r', '"', "'", '`'])
             line += char
             context = (context + char)[-40:]
 
-        # 2. Kafiye Enjeksiyonu
         if rhyme_with:
             rhymes = pronouncing.rhymes(rhyme_with)
-            # Anlamsız (gr. gibi) kısa harfleri filtrele, sadece gerçek kelimeleri al
             valid_rhymes = [r for r in rhymes if len(r) > 2 and r.isalpha()]
-            
             if valid_rhymes:
-                rhyme_word = random.choice(valid_rhymes[:15]) # En iyi 15 seçenekten biri
-                # Yarım kalan son kelimeyi temizle ve kafiyeli kelimeyi bağla
+                rhyme_word = random.choice(valid_rhymes[:15])
                 if ' ' in line:
                     line = line.rsplit(' ', 1)[0]
                 return line + " " + rhyme_word + "."
 
-        # 3. Kafiye yoksa veya bulunamadıysa cümleyi doğal bitir
         for _ in range(25):
-            char = self._predict(context)
+            char = self._predict(context, forbidden=['"', "'", '`'])
             line += char
             if char in [' ', '.', '!', '?']: break
             context = (context + char)[-40:]
-            
         return line
 
     def generate_markov_poem(self, line_count, seed_word=""):
         poem = []
         rhyme_storage = {}
-        # AABA Şeması 
         scheme = ['A', 'A', 'B', 'A'] if line_count == 4 else ['A', 'B']
-        
         for i in range(line_count):
             current_scheme = scheme[i % len(scheme)]
             target_rhyme = rhyme_storage.get(current_scheme)
-            
-            # Makaledeki anlamsal kısıt (Semantic Constraint) mantığı 
-            # Seed word sadece dize içinde değil, mantıklı bir yere enjekte edilir
-            line = self.markov_engine.generate_line(
-                rhyme_with=target_rhyme, 
-                seed=seed_word if i == 0 else None # İlk dizeye seed word'ü zorla ekle
-            )
-            
+            line = self.markov_engine.generate_line(rhyme_with=target_rhyme, seed=seed_word if i == 0 else None)
             cleaned = self._clean_line(line)
             if cleaned:
                 if current_scheme not in rhyme_storage:
                     last_word = cleaned.split()[-1].strip(".,!?;").lower()
                     rhyme_storage[current_scheme] = last_word
-                
                 poem.append(cleaned.capitalize())
         return poem
 
     def _predict(self, context, forbidden=None):
+        if forbidden is None:
+            forbidden = []
+        
+        # Parantez ve tırnakları üretim aşamasında da yasakla
+        forbidden.extend(['(', ')', '[', ']', '{', '}', '"', "'", '`'])
+        
+        # EĞER son karakter noktalamaysa, yeni bir noktalama gelmesini YASAKLA
+        # Sadece harf veya boşluk gelebilir
+        if context[-1] in ".,!?;:":
+            forbidden.extend([".", ",", "!", "?", ";", ":"])
+
         x = np.zeros((1, 40))
         for t, char in enumerate(context[-40:]):
             x[0, t] = self.char_to_int.get(char, 0)

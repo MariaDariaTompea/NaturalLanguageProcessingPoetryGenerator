@@ -1,4 +1,3 @@
-/* CRPO kelimelerini buton (chip) haline getiren ana stil */
 .word-chips {
     display: flex;
     flex-wrap: wrap;

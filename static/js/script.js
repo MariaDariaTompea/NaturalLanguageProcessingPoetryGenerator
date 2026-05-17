@@ -1,6 +1,6 @@
 class SymphonyStudio {
     constructor() {
-        // UI Elemanları
+       
         this.navButtons = document.querySelectorAll('.nav-btn');
         this.modeSections = document.querySelectorAll('.mode-section');
         this.lengthSlider = document.getElementById('poem-length');
@@ -11,7 +11,7 @@ class SymphonyStudio {
         this.seedPool = document.getElementById('seed-word-pool');
         this.activeSeedsContainer = document.getElementById('active-seeds');
 
-        // State (Durum)
+        
         this.selectedSeeds = new Set();
         this.activeMode = 'mode-corpus';
 
@@ -19,12 +19,12 @@ class SymphonyStudio {
     }
 
     init() {
-        // Navigasyon (Modlar arası geçiş)
+       
         this.navButtons.forEach(btn => {
             btn.addEventListener('click', () => this.switchMode(btn.dataset.mode));
         });
 
-        // Slider Değeri Gösterimi
+        
         if (this.lengthSlider) {
             this.lengthSlider.addEventListener('input', () => {
                 if (this.lengthValDisplay) {
@@ -33,7 +33,7 @@ class SymphonyStudio {
             });
         }
 
-        // Kopyalama Butonu
+        
         if (this.copyBtn) {
             this.copyBtn.addEventListener('click', () => {
                 navigator.clipboard.writeText(this.poemDisplay.innerText);
@@ -42,7 +42,7 @@ class SymphonyStudio {
             });
         }
 
-        // Kelime Havuzu (Seeds) - Tıklama Dinleyicileri
+   
         if (this.seedPool) {
             this.seedPool.querySelectorAll('.chip').forEach(chip => {
                 chip.onclick = () => this.toggleSeed(chip.textContent, chip);
@@ -52,12 +52,9 @@ class SymphonyStudio {
 
     switchMode(modeId) {
         this.activeMode = modeId;
-        // Buton aktiflik sınıflarını güncelle
         this.navButtons.forEach(b => b.classList.toggle('active', b.dataset.mode === modeId));
-        // Seksiyon görünürlüğünü güncelle
         this.modeSections.forEach(s => s.classList.toggle('active', s.id === modeId));
 
-        // Etkileşimli modda generate butonunu gizleyebilirsin
         if (this.generateBtn) {
             this.generateBtn.style.display = modeId === 'mode-interactive' ? 'none' : 'block';
         }
@@ -85,7 +82,7 @@ class SymphonyStudio {
         });
     }
 
-    // Şiiri ekranda satır satır canlandıran görsel fonksiyon
+
     async animatePoem(lines) {
         this.poemDisplay.innerHTML = '';
         this.copyBtn.classList.remove('invisible');
@@ -99,7 +96,7 @@ class SymphonyStudio {
         return new Promise(r => {
             const p = document.createElement('p');
             p.textContent = text;
-            p.className = 'poem-line'; // CSS'te tanımlı animasyon varsa kullanabilirsin
+            p.className = 'poem-line'; 
             p.style.opacity = '0';
             p.style.transform = 'translateY(10px)';
             p.style.transition = 'all 0.5s ease';
@@ -110,12 +107,12 @@ class SymphonyStudio {
                 p.style.opacity = '1';
                 p.style.transform = 'translateY(0)';
             });
-            setTimeout(r, 400); // Satırlar arası 0.4 saniye bekleme
+            setTimeout(r, 400); 
         });
     }
 }
 
-// Sayfa yüklendiğinde başlat
+
 document.addEventListener('DOMContentLoaded', () => {
     window.symphony = new SymphonyStudio();
 });

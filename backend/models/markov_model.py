@@ -1,49 +1,54 @@
+"""
+Markov Chain model for generating poetry with rhyme constraints.
+This model uses backward generation to ensure lines end with the correct rhyme.
+"""
 import random
 from collections import defaultdict
-from ..utils.nlp_helpers import get_meter_profile, check_rhyme_manual
+import pronouncing
+from ..utils.nlp_helpers import check_rhyme_manual
 
 class MarkovPoetryModel:
     def __init__(self, order=2):
+        # Initializes the model with n-gram order and dictionaries
         self.order = order
-        self.model = defaultdict(list)
-        self.start_words = []
+        self.forward_model = defaultdict(list)
+        self.backward_model = defaultdict(list)
+        self.line_ends = []
 
     def train(self, corpus_text):
-        """
-        Makalede Dylan korpusunda yapıldığı gibi n-gram RF (Relative Frequency) çıkarır[cite: 61, 185].
-        """
+        # Processes the corpus to create backward transitions and collect rhyme words
         lines = corpus_text.split('\n')
         for line in lines:
             words = line.split()
             if len(words) < self.order: continue
             
-            self.start_words.append(tuple(words[:self.order]))
-            for i in range(len(words) - self.order):
-                key = tuple(words[i:i+self.order])
-                next_word = words[i+self.order]
-                self.model[key].append(next_word)
+            self.line_ends.append(words[-1])
+            rev_words = words[::-1]
+            for i in range(len(rev_words) - self.order):
+                key = tuple(rev_words[i:i+self.order])
+                next_word = rev_words[i+self.order]
+                self.backward_model[key].append(next_word)
 
-    def generate_line(self, rhyme_with=None, seed=None, target_len=7):
-        # Makaledeki gibi 2. dereceden başlangıç [cite: 185]
-        current = random.choice(self.start_words)
-        result = list(current)
+    def generate_line_backwards(self, rhyme_with=None, target_len=6):
+        # Generates a poem line starting from the last word (rhyme) to the beginning
+        if rhyme_with:
+            options = [w for w in self.line_ends if check_rhyme_manual(w, rhyme_with)]
+            if not options:
+                options = pronouncing.rhymes(rhyme_with)
+            current_word = random.choice(options) if options else random.choice(self.line_ends)
+        else:
+            current_word = random.choice(self.line_ends)
+
+        result = [current_word]
+        possible_seconds = [key[1] for key in self.backward_model.keys() if key[0] == current_word]
+        if not possible_seconds: return current_word
         
-        # Eğer seed word varsa ve dizede yoksa dizeye dahil et [cite: 193]
-        if seed and seed.lower() not in [w.lower() for w in result]:
-            result.insert(random.randint(0, len(result)), seed)
+        result.append(random.choice(possible_seconds))
 
-        for i in range(target_len - len(result)):
+        for i in range(target_len - 2):
             key = tuple(result[-2:])
-            possible_next = self.model.get(key, [])
+            possible_next = self.backward_model.get(key, [])
             if not possible_next: break
-            
-            # Kafiye kısıtı (Unary Constraint) [cite: 121, 127]
-            if i == (target_len - len(result) - 1) and rhyme_with:
-                valid_rhymes = [w for w in possible_next if check_rhyme_manual(w, rhyme_with)]
-                next_word = random.choice(valid_rhymes) if valid_rhymes else random.choice(possible_next)
-            else:
-                next_word = random.choice(possible_next)
-                
-            result.append(next_word)
-            
-        return " ".join(result)
+            result.append(random.choice(possible_next))
+
+        return " ".join(result[::-1])
